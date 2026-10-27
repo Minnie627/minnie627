@@ -1,0 +1,504 @@
+/* ============================================================
+   每日一束花 - 样式
+   浪漫可爱线条风 · 移动端适配（viewport / 安全区 / 触摸）
+   ============================================================ */
+
+:root {
+  --bg-top: #FFF7F0;
+  --bg-bottom: #FFE9E3;
+  --ink: #7A5A5A;
+  --ink-soft: #A98A8A;
+  --accent: #E86A8C;
+  --accent-soft: #F5A6B8;
+  --card: #FFFFFF;
+  --shadow: 0 8px 30px rgba(230, 150, 160, 0.18);
+  --radius: 22px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;              /* 禁滚动回弹 */
+  overflow-x: hidden;
+  touch-action: none;            /* 触摸优先 */
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 背景装饰线条（浪漫可爱线条风） */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(245, 166, 184, 0.22) 0, transparent 30%),
+    radial-gradient(circle at 82% 72%, rgba(181, 166, 224, 0.20) 0, transparent 32%),
+    radial-gradient(circle at 70% 18%, rgba(255, 224, 102, 0.18) 0, transparent 26%);
+  z-index: 0;
+}
+
+/* 手绘小点缀（线条） */
+body::after {
+  content: "✿";
+  position: absolute;
+  top: 8%;
+  left: 8%;
+  font-size: 40px;
+  color: rgba(232, 106, 140, 0.25);
+  transform: rotate(-15deg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- 开场问候 ---------- */
+#greeting {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+#greeting.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#greeting.fade-out {
+  opacity: 0;
+}
+
+#greetingText {
+  font-size: 96px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 圆润可爱的字形 */
+  font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  opacity: 0;
+  /* 文字描边 + 软阴影，做出果冻可爱质感 */
+  text-shadow: 0 6px 18px rgba(232, 106, 140, 0.35);
+  -webkit-text-stroke: 2px #fff;
+}
+
+/* 每个字：弹跳入场 + 持续摇摆 */
+#greetingText .bounce-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(60px) scale(0.3);
+  animation: char-bounce-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             char-wiggle 1.8s ease-in-out infinite;
+  /* wiggle 在入场完成后开始 */
+}
+
+#greetingText .bounce-char:nth-child(1) { animation-delay: 0s, 0.55s; }
+#greetingText .bounce-char:nth-child(2) { animation-delay: 0.12s, 0.67s; }
+#greetingText .bounce-char:nth-child(3) { animation-delay: 0.24s, 0.79s; }
+
+/* 弹跳入场 */
+@keyframes char-bounce-in {
+  0%   { opacity: 0; transform: translateY(60px) scale(0.3); }
+  55%  { opacity: 1; transform: translateY(-12px) scale(1.18); }
+  75%  { opacity: 1; transform: translateY(4px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 持续摇摆（像果冻一样轻轻晃动） */
+@keyframes char-wiggle {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25%      { transform: translateY(-6px) rotate(-3deg) scale(1.04); }
+  50%      { transform: translateY(0) rotate(0deg) scale(1); }
+  75%      { transform: translateY(-4px) rotate(3deg) scale(1.03); }
+}
+
+#greetingText.pop {
+  opacity: 1;
+}
+
+#greetingSub {
+  font-size: 18px;
+  color: var(--ink-soft);
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.5s forwards;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- 主场景 ---------- */
+#main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  max-height: 820px;
+  padding: 24px 16px;
+  /* 安全区 */
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+#main.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 标题 */
+.header {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.header .app-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 3px;
+}
+
+.header .date-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+/* 花束展示区 */
+#bouquetWrap {
+  width: 100%;
+  max-width: 360px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.bouquet-svg {
+  width: 100%;
+  height: auto;
+  max-height: 46vh;
+}
+
+.bouquet-svg.bloom .flower {
+  transform-origin: center;
+  transform: scale(0);
+  animation: bloom 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bouquet-svg.bloom .flower:nth-child(2) { animation-delay: 0.1s; }
+.bouquet-svg.bloom .flower:nth-child(3) { animation-delay: 0.2s; }
+.bouquet-svg.bloom .flower:nth-child(4) { animation-delay: 0.3s; }
+.bouquet-svg.bloom .flower:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes bloom {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.bouquet-svg .stems {
+  animation: stems-grow 1s ease 0.2s both;
+}
+
+@keyframes stems-grow {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 花名与 mood 标签 */
+.flower-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#flowerName {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+#moodTag {
+  font-size: 12px;
+  color: #fff;
+  background: var(--accent-soft);
+  padding: 4px 12px;
+  border-radius: 999px;
+  letter-spacing: 1px;
+}
+
+/* 治愈文案卡片 */
+.quote-card {
+  width: 100%;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  text-align: center;
+  margin: 10px 0 16px;
+  border: 2px dashed rgba(232, 106, 140, 0.25);
+}
+
+#quote {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+/* 按钮区：grid 三列，中间主按钮更宽，天然不溢出 */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.btn {
+  min-width: 0;                    /* 允许收缩，防止溢出 */
+  min-height: 54px;               /* 热区 ≥ 44px */
+  border: none;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  padding: 0 8px;
+  overflow: hidden;               /* 兜底：文字超宽时裁剪而非撑破 */
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #F58A9E 100%);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(232, 106, 140, 0.35);
+}
+
+.btn-primary.done {
+  background: linear-gradient(135deg, #C9B8D8 0%, #B9A6E0 100%);
+  box-shadow: 0 6px 18px rgba(185, 166, 224, 0.3);
+  pointer-events: none;
+}
+
+.btn-ghost {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- 落花粒子 ---------- */
+.petal-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.petal {
+  position: absolute;
+  top: -20px;
+  border-radius: 50% 50% 50% 0;
+  opacity: 0.8;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0.85; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0.1; }
+}
+
+/* ---------- 收藏册（底部弹层） ---------- */
+#historySheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(120, 80, 80, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#historySheet.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 460px;
+  background: #FFFDF9;
+  border-radius: 28px 28px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+#historySheet.show .sheet {
+  transform: translateY(0);
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sheet-header h2 {
+  font-size: 18px;
+  color: var(--ink);
+  letter-spacing: 2px;
+}
+
+.sheet-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #F3E9E9;
+  border-radius: 50%;
+  font-size: 20px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#historyList {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  touch-action: pan-y;             /* 弹层内允许滚动 */
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px dashed rgba(169, 138, 138, 0.2);
+}
+
+.history-item .h-date {
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.history-item .h-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.history-item .h-quote {
+  font-size: 13px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item .empty,
+.empty {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 40px 0;
+}
+
+/* ---------- Toast ---------- */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(90, 70, 70, 0.9);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: 84%;
+  text-align: center;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- 小屏适配 ---------- */
+@media (max-height: 700px) {
+  #greetingText { font-size: 72px; }
+  .bouquet-svg { max-height: 38vh; }
+  #flowerName { font-size: 22px; }
+  .quote-card { padding: 14px 16px; }
+}
+
+@media (max-width: 360px) {
+  .actions { gap: 6px; }
+  .btn { font-size: 13px; letter-spacing: 0px; padding: 0 6px; }
+}
+
+@media (max-width: 330px) {
+  .btn { font-size: 12px; padding: 0 4px; }
+  .actions { grid-template-columns: 1fr 1.3fr 1fr; }
+}

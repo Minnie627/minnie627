@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- 移动端适配：禁缩放、cover 安全区 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FFF7F0">
+  <title>每日一束花</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <!-- 开场问候「啵啵~」 -->
+  <div id="greeting">
+    <div id="greetingText"></div>
+    <div id="greetingSub"></div>
+  </div>
+
+  <!-- 主场景 -->
+  <div id="main">
+    <div class="header">
+      <div class="app-name">每日一束花</div>
+      <div class="date-label" id="dateLabel"></div>
+    </div>
+
+    <!-- 今日花束 -->
+    <div id="bouquetWrap"></div>
+
+    <!-- 花名与 mood -->
+    <div class="flower-info">
+      <span id="flowerName"></span>
+      <span id="moodTag"></span>
+    </div>
+
+    <!-- 治愈文案 -->
+    <div class="quote-card">
+      <p id="quote"></p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="actions">
+      <button class="btn btn-ghost" id="btnHistory">花语收藏</button>
+      <button class="btn btn-primary" id="btnCollect">
+        <span id="btnCollectText">领取今日花束</span>
+      </button>
+      <button class="btn btn-ghost" id="btnShare">分享</button>
+    </div>
+  </div>
+
+  <!-- 收藏册弹层 -->
+  <div id="historySheet">
+    <div class="sheet">
+      <div class="sheet-header">
+        <h2>花语收藏册</h2>
+        <button class="sheet-close" id="historyClose">✕</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- 配置表 + 主逻辑（相对路径，零 CDN） -->
+  <script src="./js/config.js"></script>
+  <script src="./js/game.js"></script>
+</body>
+</html>
