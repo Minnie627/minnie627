@@ -449,10 +449,6 @@
         head(P.kind, r, P, id, rnd) + "</g></g>";
     }
 
-    // 纸纹颗粒（最上层，极淡）
-    var grain = '<rect x="100" y="110" width="340" height="560" filter="url(#' + id + 'grain)" ' +
-      'opacity="0.13" style="mix-blend-mode:multiply"/>';
-
     return (
       '<svg viewBox="112 132 310 522" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg" preserveAspectRatio="xMidYMid meet">' +
       defs(id) +
@@ -461,7 +457,6 @@
       '<g class="stems">' + stems + "</g>" +
       '<g class="buds">' + buds + "</g>" +
       '<g class="flowers">' + flowers + "</g>" +
-      grain +
       "</svg>"
     );
   }

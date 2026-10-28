@@ -264,13 +264,15 @@ body::before {
 #bouquetWrap {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 100%;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 8px 0;
+  margin: 0;
   min-height: 0;
+  padding: 0 4px;
+  overflow: visible;
 }
 
 /* 手写「dc」层 */
@@ -297,21 +299,18 @@ body::before {
   overflow: visible;
 }
 
-/* 手写 dc：细线条手写，淡豆绿，逐笔写出 */
-.hw-line {
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  opacity: 0;
+/* 手写 dc：毛笔体，淡豆绿，自左向右一笔写出 */
+.handwrite-svg {
+  clip-path: inset(0 100% 0 0);
 }
 
-.hw-line.on {
-  animation: hw-draw 0.92s cubic-bezier(0.32, 0.72, 0.35, 1) forwards;
+.handwrite-svg.on {
+  animation: hw-wipe 1.05s cubic-bezier(0.36, 0.1, 0.3, 1) forwards;
 }
 
-@keyframes hw-draw {
-  0%   { stroke-dashoffset: 100; opacity: 0; }
-  12%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
+@keyframes hw-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
 
 /* 鲜花层 */
@@ -333,7 +332,7 @@ body::before {
 .bouquet-svg {
   width: 100%;
   height: auto;
-  max-height: 60vh;      /* 花卉整体放大 */
+  max-height: 68vh;      /* 花卉整体放大 */
 }
 
 /* 鲜花逐朵绽放 */
