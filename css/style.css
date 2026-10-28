@@ -140,23 +140,23 @@ body::before {
   position: absolute;
   right: 6%;
   top: 17%;
-  width: clamp(104px, 30vw, 142px);
+  width: clamp(124px, 33vw, 158px);
   height: auto;
   opacity: 0;
-  transform: rotate(-14deg) scale(0.6);
+  transform: rotate(-3deg) scale(0.6);
   opacity: 0.86;
-  filter: drop-shadow(0 8px 16px rgba(180, 40, 70, 0.18));
+  filter: drop-shadow(0 8px 18px rgba(180, 40, 70, 0.22));
   animation: kiss-stamp 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 0.78s forwards,
              kiss-float 4.8s ease-in-out 1.9s infinite;
 }
 @keyframes kiss-stamp {
-  0%   { opacity: 0; transform: rotate(-28deg) scale(1.75); }
-  60%  { opacity: 1; transform: rotate(-11deg) scale(0.93); }
-  100% { opacity: 0.92; transform: rotate(-14deg) scale(1); }
+  0%   { opacity: 0; transform: rotate(-16deg) scale(1.7); }
+  60%  { opacity: 1; transform: rotate(-2deg) scale(0.94); }
+  100% { opacity: 0.94; transform: rotate(-3deg) scale(1); }
 }
 @keyframes kiss-float {
-  0%, 100% { opacity: 0.92; transform: rotate(-14deg) translateY(0) scale(1); }
-  50%      { opacity: 1;    transform: rotate(-11deg) translateY(-7px) scale(1.035); }
+  0%, 100% { opacity: 0.94; transform: rotate(-3deg) translateY(0) scale(1); }
+  50%      { opacity: 1;    transform: rotate(-1deg) translateY(-7px) scale(1.035); }
 }
 
 /* 四角星光 */
@@ -582,12 +582,6 @@ body::before {
 }
 
 /* ---------- 文字小按钮（体验入口 / 恢复默认） ---------- */
-.mini-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 7px;
-}
-
 .mini-btn {
   -webkit-appearance: none;
   appearance: none;
@@ -919,7 +913,6 @@ body::before {
   .quote-card { padding: 7px 10px; margin: 5px 0 8px; }
   #quote { font-size: 14.5px; line-height: 1.65; letter-spacing: 0.5px; }
   .btn { min-height: 46px; }
-  .mini-actions { margin-top: 5px; }
 }
 
 @media (max-width: 360px) {

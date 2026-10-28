@@ -40,7 +40,6 @@
     dateLabel: $("#dateLabel"),
     btnCollect: $("#btnCollect"),
     btnCollectText: $("#btnCollectText"),
-    btnReplay: $("#btnReplay"),
     btnReset: $("#btnReset"),
     btnHistory: $("#btnHistory"),
     btnShare: $("#btnShare"),
@@ -523,21 +522,6 @@
   }
 
   // ============================================================
-  // 体验入口：再走一遍「领取」的完整反馈（不重复记账）
-  // ============================================================
-  function replayCollect() {
-    if (!state.collected) {
-      collectFlower();                 // 还没领过 → 直接走真实领取
-      return;
-    }
-    const pal = state.palette || window.FLOWERS.paletteFor(state.bouquet);
-    spawnPetals([pal.petalLight, pal.petalMid, pal.petalDeep]);
-    playChime();
-    showLoveModal();
-    showToast("再收一次花，也一样心动 🌸");
-  }
-
-  // ============================================================
   // 全部恢复默认设置
   // ============================================================
   let resetArmedAt = 0;
@@ -683,12 +667,6 @@
       e.preventDefault();
       shareFlower();
     });
-    if (els.btnReplay) {
-      els.btnReplay.addEventListener("click", function (e) {
-        e.preventDefault();
-        replayCollect();
-      });
-    }
     if (els.btnReset) {
       els.btnReset.addEventListener("click", function (e) {
         e.preventDefault();
@@ -766,7 +744,6 @@
         quote: CFG.quotes[UTIL.quoteIndexFor(dateKey)],
       };
     },
-    replay: function () { replayCollect(); return "已重播领取流程"; },
     reset: function () { return resetAll(); },
     exportJSON: function () {
       return JSON.stringify({
