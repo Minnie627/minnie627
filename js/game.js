@@ -116,7 +116,7 @@
     filter.frequency.exponentialRampToValueAtTime(600, t0 + 0.15);
 
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(0.95, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.42, t0 + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
 
     osc.connect(filter);
@@ -136,52 +136,64 @@
   }
 
   // ---------- 稚幼童声朗读「bō」「bó」 ----------
-  let cachedVoice = null;
+  let voiceList = [];
 
+  function refreshVoices() {
+    if (!window.speechSynthesis) return;
+    try { voiceList = speechSynthesis.getVoices() || []; } catch (e) { voiceList = []; }
+  }
+
+  // 优先中文女声/童声音色 —— 更接近「啵啵」的奶音
   function pickZhVoice() {
-    if (!window.speechSynthesis) return null;
-    let list = [];
-    try { list = speechSynthesis.getVoices() || []; } catch (e) { return null; }
-    if (!list.length) return null;
-    const zh = list.filter(function (v) { return /^zh/i.test(v.lang || ""); });
+    if (!voiceList.length) refreshVoices();
+    if (!voiceList.length) return null;
+    const zh = voiceList.filter(function (v) { return /^zh/i.test(v.lang || ""); });
     if (!zh.length) return null;
-    // 优先挑选偏童声 / 女声的音色，听起来更稚嫩
-    const prefer = /child|kid|girl|junior|xiaoyi|xiaoxiao|xiaohan|ting|huihui|yaoyao|female|女|童/i;
+    const prefer = /xiaoyi|xiaoxiao|xiaohan|xiaomeng|xiaoshuang|huihui|yaoyao|ting|mei|female|女|童|child|kid|girl|junior/i;
     return zh.find(function (v) { return prefer.test(v.name || ""); }) || zh[0];
   }
 
-  // 预热音色列表（部分浏览器异步加载）
   if (window.speechSynthesis) {
-    cachedVoice = pickZhVoice();
-    try {
-      speechSynthesis.onvoiceschanged = function () { cachedVoice = pickZhVoice(); };
-    } catch (e) {}
+    refreshVoices();
+    try { speechSynthesis.onvoiceschanged = refreshVoices; } catch (e) {}
   }
 
-  // 第一声 bō（阴平：高而平），第二声 bó（阳平：更扬、尾音略长）
-  function speakBo() {
-    if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance === "undefined") return false;
-    try {
-      speechSynthesis.cancel();
-      const v = cachedVoice || pickZhVoice();
-      const mk = function (pitch, rate) {
-        const u = new SpeechSynthesisUtterance("啵");
+  function utter(text, pitch, rate, delay) {
+    const sy = window.speechSynthesis;
+    const run = function () {
+      const v = pickZhVoice();
+      try {
+        const u = new SpeechSynthesisUtterance(text);
         u.lang = "zh-CN";
-        u.pitch = pitch;   // 高音高 → 童声感
+        u.pitch = pitch;   // 抬高音高 → 奶音童声
         u.rate = rate;
-        u.volume = 1;
+        u.volume = 1;      // 拉满
         if (v) u.voice = v;
-        return u;
-      };
-      speechSynthesis.speak(mk(1.9, 0.92));   // bō
-      setTimeout(function () {
-        try { speechSynthesis.speak(mk(2.0, 0.62)); } catch (e) {}  // bó：更慢更长，听感上扬
-      }, 440);
-      state.boopPlayed = true;
-      return true;
-    } catch (e) {
-      return false;
-    }
+        u.onerror = function () {};
+        sy.speak(u);
+      } catch (e) {}
+    };
+    if (delay) setTimeout(run, delay); else run();
+  }
+
+  // 第一声 bō（高而平），第二声 bó（更扬、尾音更长）
+  function speakBo() {
+    const sy = window.speechSynthesis;
+    if (!sy || typeof window.SpeechSynthesisUtterance === "undefined") return false;
+    refreshVoices();
+    try { sy.cancel(); } catch (e) {}
+    try { if (sy.paused) sy.resume(); } catch (e) {}
+
+    utter("啵", 1.72, 0.72, 60);
+    utter("啵", 1.9, 0.58, 660);
+
+    // 兜底：若 1.6s 后完全没在播放，用最朴素的方式再读一次
+    setTimeout(function () {
+      if (!sy.speaking && !sy.pending) {
+        utter("啵啵", 1.7, 0.8, 0);
+      }
+    }, 1600);
+    return true;
   }
 
   // 统一入口：先发合成「啵」音（必定有声），再叠加童声朗读
@@ -203,7 +215,7 @@
       osc.type = "triangle";
       osc.frequency.setValueAtTime(f, t0);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.40, t0 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -228,6 +240,13 @@
         if (ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
       }
       state.audioReady = true;
+      // 预热语音引擎：先静音说一句，避免第一次真正朗读被浏览器吞掉
+      try {
+        const warm = new SpeechSynthesisUtterance(" ");
+        warm.volume = 0;
+        warm.lang = "zh-CN";
+        speechSynthesis.speak(warm);
+      } catch (e) {}
       if (!state.boopPlayed) sayBo();
       if (els.greetHint) els.greetHint.classList.add("hide");
       document.removeEventListener("pointerdown", unlock);
@@ -314,14 +333,14 @@
     els.flowerInfo.classList.remove("show");
     els.quoteCard.classList.remove("show");
 
-    // 用墨迹晕染的方式显现（笔画始终完整，不做部分描边）
-    const word = els.handwrite.querySelector(".hw-word");
-    if (word) {
-      word.classList.remove("hw-in");
-      // 强制回流，确保动画每次都重新播放
-      void word.getBoundingClientRect();
-      word.classList.add("hw-in");
-    }
+    // 细线条逐笔写出（对照参考图的细笔手写）
+    const lines = els.handwrite.querySelectorAll(".hw-line");
+    lines.forEach(function (ln, i) {
+      ln.classList.remove("on");
+      void ln.getBoundingClientRect();
+      ln.style.animationDelay = (i * 0.28) + "s";
+      ln.classList.add("on");
+    });
 
     // 2) 手写淡出
     setTimeout(function () {
@@ -345,13 +364,17 @@
     }, CFG.anim.handwrite + CFG.anim.handwriteOut + 720);
   }
 
-  // 手写「dc」：取自参考图的优雅斜体书写风；笔画完整连贯、整体居中，无任何装饰元素
+  // 手写「dc」：细线条手写体（对照参考图：淡豆绿、等宽细笔、圆笔头、单笔连写）
   function buildHandwriteSVG() {
+    var C = "#C6D2BA";
     return (
       '<svg viewBox="0 0 320 200" class="handwrite-svg" xmlns="http://www.w3.org/2000/svg">' +
-        '<text class="hw-word" x="160" y="142" text-anchor="middle" ' +
-          'font-family="Cormorant Garamond, Playfair Display, Georgia, Times New Roman, serif" ' +
-          'font-style="italic" font-weight="400" font-size="148" letter-spacing="3">dc</text>' +
+        '<g fill="none" stroke="' + C + '" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" transform="skewX(-5)">' +
+          // d：一笔从长竖落笔，绕一圈收在右下
+          '<path class="hw-line" pathLength="100" d="M206 44 C 186 72 158 98 136 115 C 142 88 114 71 88 75 C 60 79 46 107 56 133 C 66 159 101 167 123 147 C 133 137 137 125 135 115"/>' +
+          // c
+          '<path class="hw-line" pathLength="100" d="M250 102 C 228 84 198 93 190 123 C 182 153 206 171 232 159 C 240 156 246 151 250 145"/>' +
+        "</g>" +
       "</svg>"
     );
   }
@@ -366,7 +389,7 @@
   }
 
   // ============================================================
-  // 花束渲染（复古植物学墨线风格，绘制逻辑在 flowers.js）
+  // 花束渲染（水彩风格，绘制逻辑在 flowers.js）
   // ============================================================
   function renderBouquet() {
     const b = state.bouquet;
@@ -374,8 +397,8 @@
     els.bouquetBox.innerHTML = window.FLOWERS.build(b, rnd);
     const svg = els.bouquetBox.firstElementChild;
     if (svg) svg.classList.add("bloom");
-    // 纸色调飘落花瓣，克制不抢戏
-    spawnPetals(["#E8E1CC", "#DCD3B8", "#CFC5AA"]);
+    // 水彩粉色飘落花瓣
+    spawnPetals(["#F7CEDB", "#F2B4C6", "#FBE3EA"]);
   }
   // 落花粒子
   function spawnPetals(colors) {

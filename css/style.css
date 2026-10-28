@@ -291,29 +291,27 @@ body::before {
 }
 
 .handwrite-svg {
-  width: 62%;
-  max-width: 220px;
+  width: 78%;
+  max-width: 300px;
   height: auto;
   overflow: visible;
 }
 
-/* 手写 dc 字样：优雅斜体，墨绿墨色，笔画完整 */
-.hw-word {
-  fill: #3F4C39;
+/* 手写 dc：细线条手写，淡豆绿，逐笔写出 */
+.hw-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
   opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
 }
 
-.hw-word.hw-in {
-  animation: hw-ink 1.05s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+.hw-line.on {
+  animation: hw-draw 0.92s cubic-bezier(0.32, 0.72, 0.35, 1) forwards;
 }
 
-/* 墨迹晕染：从模糊到清晰，笔画自始至终完整 */
-@keyframes hw-ink {
-  0%   { opacity: 0; filter: blur(7px); transform: scale(1.04); }
-  55%  { opacity: 0.9; filter: blur(1.4px); }
-  100% { opacity: 1; filter: blur(0); transform: scale(1); }
+@keyframes hw-draw {
+  0%   { stroke-dashoffset: 100; opacity: 0; }
+  12%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
 }
 
 /* 鲜花层 */
@@ -364,9 +362,9 @@ body::before {
 }
 
 @keyframes bloom {
-  from { transform: scale(0.2); opacity: 0; }
-  70%  { opacity: 1; }
-  to   { transform: scale(1); opacity: 1; }
+  from { transform: translateY(10px) scale(0.92); opacity: 0; }
+  65%  { opacity: 1; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 @keyframes stems-grow {

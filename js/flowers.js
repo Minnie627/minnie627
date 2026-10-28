@@ -1,180 +1,208 @@
 // ============================================================
-// 复古植物学图谱 · 墨线花卉绘制引擎
-// 风格：陈年米白纸上的一株植物标本插画
-//   · 单根主茎，细枝三两，留白通透
-//   · 白色薄瓣花朵，细墨线勾边
-//   · 细长花苞成簇生于枝梢
-//   · 实心墨绿叶片 + 纸色叶脉
+// 水彩花卉绘制引擎
+// 质感要点（对照参考图）：
+//   1. feTurbulence + feDisplacementMap 让每块色面边缘不规则 —— 湿画法的自然扩散
+//   2. 同色多次薄涂叠加（半透明），重叠处自然加深 —— 颜料沉积
+//   3. 色块边缘一道深色水线（颜料向边缘聚集），内部留白 —— 花瓣透光
+//   4. 整幅覆盖极淡纸纹颗粒 —— 水彩纸肌理
+//   5. 背景为大片淡绿晕染 + 飞溅点
 // 对外接口：window.FLOWERS.build(bouquet, seededRandom)
 // ============================================================
 (function () {
   "use strict";
 
-  // 墨色调（整体偏淡的墨绿）
-  var INK = {
-    line: "#5C6850",    // 勾线墨绿
-    leaf: "#6C7A62",    // 叶片实心绿
-    leafD: "#5E6C55",   // 花萼 / 花茎深一档
-    vein: "#F8F4E8",    // 叶脉（纸色）
-    flower: "#FDFBF3",  // 花瓣奶白
-    stamen: "#7E8B70"   // 花蕊
+  // 取色自参考图
+  var WC = {
+    petalLight: "#FFFDFC",
+    petalMid: "#F9CBD8",
+    petalDeep: "#EF9BB2",
+    petalEdge: "#DC7A96",
+    center: "#FCF6DE",
+    anther: "#DFC468",
+    pistil: "#8FB063",
+    stem: "#A9C383",
+    stemDeep: "#7E9E58",
+    leafLight: "#C6DBA0",
+    leafMid: "#A3C077",
+    leafDeep: "#7FA35C",
+    wash: "#CFE0B5"
   };
 
+  var uidSeq = 0;
   function n(v) { return Math.round(v * 10) / 10; }
-  function p2(p) { return n(p[0]) + " " + n(p[1]); }
 
-  // ---------------- 曲线与茎 ----------------
-
-  // 三次贝塞尔采样
-  function sample(seg, steps) {
-    var p0 = seg[0], c1 = seg[1], c2 = seg[2], p3 = seg[3], out = [];
-    for (var i = 0; i <= steps; i++) {
-      var t = i / steps, u = 1 - t;
-      out.push([
-        u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p3[0],
-        u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p3[1]
-      ]);
-    }
-    return out;
-  }
-
-  // 由粗到细的实体茎（沿曲线生成左右两条偏移线）
-  function ribbon(seg, w0, w1, fill) {
-    var pts = sample(seg, 18), L = [], R = [], i;
-    for (i = 0; i < pts.length; i++) {
-      var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
-      var dx = b[0] - a[0], dy = b[1] - a[1];
-      var m = Math.sqrt(dx * dx + dy * dy) || 1;
-      var nx = -dy / m, ny = dx / m;
-      var w = (w0 + (w1 - w0) * (i / (pts.length - 1))) / 2;
-      L.push([pts[i][0] + nx * w, pts[i][1] + ny * w]);
-      R.push([pts[i][0] - nx * w, pts[i][1] - ny * w]);
-    }
-    var d = "M" + p2(L[0]);
-    for (i = 1; i < L.length; i++) d += " L" + p2(L[i]);
-    for (i = R.length - 1; i >= 0; i--) d += " L" + p2(R[i]);
-    d += " Z";
-    return '<path d="' + d + '" fill="' + (fill || INK.leafD) + '" stroke="' + INK.line +
-      '" stroke-width="0.8" stroke-linejoin="round"/>';
-  }
-
-  // ---------------- 花瓣 ----------------
+  // ---------------- 造型 ----------------
 
   function petalPath(len, wid, shape) {
-    if (shape === "pointed") {
-      return "M0 0 C " + n(-wid) + " " + n(-len * 0.30) + " " + n(-wid * 0.62) + " " + n(-len * 0.74) + " 0 " + n(-len) +
-        " C " + n(wid * 0.62) + " " + n(-len * 0.74) + " " + n(wid) + " " + n(-len * 0.30) + " 0 0 Z";
-    }
-    if (shape === "spoon") {
-      return "M0 0 C " + n(-wid * 0.55) + " " + n(-len * 0.30) + " " + n(-wid * 0.92) + " " + n(-len * 0.62) + " " + n(-wid * 0.86) + " " + n(-len * 0.82) +
-        " C " + n(-wid * 0.76) + " " + n(-len * 0.99) + " " + n(-wid * 0.30) + " " + n(-len * 1.02) + " 0 " + n(-len) +
-        " C " + n(wid * 0.30) + " " + n(-len * 1.02) + " " + n(wid * 0.76) + " " + n(-len * 0.99) + " " + n(wid * 0.86) + " " + n(-len * 0.82) +
-        " C " + n(wid * 0.92) + " " + n(-len * 0.62) + " " + n(wid * 0.55) + " " + n(-len * 0.30) + " 0 0 Z";
+    if (shape === "cup") {
+      return "M0 0 C " + n(-wid * 1.05) + " " + n(-len * 0.26) + " " + n(-wid * 1.02) + " " + n(-len * 0.74) + " " + n(-wid * 0.52) + " " + n(-len * 0.94) +
+        " C " + n(-wid * 0.26) + " " + n(-len * 1.04) + " " + n(wid * 0.26) + " " + n(-len * 1.04) + " " + n(wid * 0.52) + " " + n(-len * 0.94) +
+        " C " + n(wid * 1.02) + " " + n(-len * 0.74) + " " + n(wid * 1.05) + " " + n(-len * 0.26) + " 0 0 Z";
     }
     if (shape === "narrow") {
-      return "M0 0 C " + n(-wid * 0.60) + " " + n(-len * 0.34) + " " + n(-wid * 0.46) + " " + n(-len * 0.78) + " 0 " + n(-len) +
-        " C " + n(wid * 0.46) + " " + n(-len * 0.78) + " " + n(wid * 0.60) + " " + n(-len * 0.34) + " 0 0 Z";
+      return "M0 0 C " + n(-wid * 0.62) + " " + n(-len * 0.34) + " " + n(-wid * 0.50) + " " + n(-len * 0.76) + " 0 " + n(-len) +
+        " C " + n(wid * 0.50) + " " + n(-len * 0.76) + " " + n(wid * 0.62) + " " + n(-len * 0.34) + " 0 0 Z";
     }
     if (shape === "round") {
-      return "M0 0 C " + n(-wid * 1.06) + " " + n(-len * 0.20) + " " + n(-wid * 1.0) + " " + n(-len * 0.74) + " " + n(-wid * 0.54) + " " + n(-len * 0.94) +
-        " C " + n(-wid * 0.28) + " " + n(-len * 1.02) + " " + n(wid * 0.28) + " " + n(-len * 1.02) + " " + n(wid * 0.54) + " " + n(-len * 0.94) +
-        " C " + n(wid * 1.0) + " " + n(-len * 0.74) + " " + n(wid * 1.06) + " " + n(-len * 0.20) + " 0 0 Z";
+      return "M0 0 C " + n(-wid * 1.02) + " " + n(-len * 0.18) + " " + n(-wid * 1.0) + " " + n(-len * 0.70) + " " + n(-wid * 0.58) + " " + n(-len * 0.93) +
+        " C " + n(-wid * 0.30) + " " + n(-len * 1.04) + " " + n(wid * 0.30) + " " + n(-len * 1.04) + " " + n(wid * 0.58) + " " + n(-len * 0.93) +
+        " C " + n(wid * 1.0) + " " + n(-len * 0.70) + " " + n(wid * 1.02) + " " + n(-len * 0.18) + " 0 0 Z";
     }
     if (shape === "ruffle") {
-      return "M0 0 C " + n(-wid) + " " + n(-len * 0.22) + " " + n(-wid * 1.04) + " " + n(-len * 0.52) + " " + n(-wid * 0.72) + " " + n(-len * 0.72) +
-        " C " + n(-wid * 0.52) + " " + n(-len * 0.86) + " " + n(-wid * 0.30) + " " + n(-len * 0.84) + " " + n(-wid * 0.16) + " " + n(-len * 0.98) +
-        " C " + n(-wid * 0.06) + " " + n(-len * 1.0) + " " + n(wid * 0.06) + " " + n(-len * 1.0) + " " + n(wid * 0.16) + " " + n(-len * 0.98) +
-        " C " + n(wid * 0.30) + " " + n(-len * 0.84) + " " + n(wid * 0.52) + " " + n(-len * 0.86) + " " + n(wid * 0.72) + " " + n(-len * 0.72) +
-        " C " + n(wid * 1.04) + " " + n(-len * 0.52) + " " + n(wid) + " " + n(-len * 0.22) + " 0 0 Z";
+      return "M0 0 C " + n(-wid) + " " + n(-len * 0.22) + " " + n(-wid * 1.05) + " " + n(-len * 0.52) + " " + n(-wid * 0.74) + " " + n(-len * 0.74) +
+        " C " + n(-wid * 0.56) + " " + n(-len * 0.88) + " " + n(-wid * 0.34) + " " + n(-len * 0.84) + " " + n(-wid * 0.18) + " " + n(-len * 0.99) +
+        " C " + n(-wid * 0.06) + " " + n(-len * 1.02) + " " + n(wid * 0.06) + " " + n(-len * 1.02) + " " + n(wid * 0.18) + " " + n(-len * 0.99) +
+        " C " + n(wid * 0.34) + " " + n(-len * 0.84) + " " + n(wid * 0.56) + " " + n(-len * 0.88) + " " + n(wid * 0.74) + " " + n(-len * 0.74) +
+        " C " + n(wid * 1.05) + " " + n(-len * 0.52) + " " + n(wid) + " " + n(-len * 0.22) + " 0 0 Z";
     }
-    if (shape === "cup") {
-      return "M0 0 C " + n(-wid * 1.1) + " " + n(-len * 0.30) + " " + n(-wid * 1.15) + " " + n(-len * 0.78) + " " + n(-wid * 0.62) + " " + n(-len * 0.94) +
-        " C " + n(-wid * 0.36) + " " + n(-len * 1.02) + " " + n(-wid * 0.16) + " " + n(-len * 0.90) + " 0 " + n(-len * 1.0) +
-        " C " + n(wid * 0.16) + " " + n(-len * 0.90) + " " + n(wid * 0.36) + " " + n(-len * 1.02) + " " + n(wid * 0.62) + " " + n(-len * 0.94) +
-        " C " + n(wid * 1.15) + " " + n(-len * 0.78) + " " + n(wid * 1.1) + " " + n(-len * 0.30) + " 0 0 Z";
-    }
-    // 默认：卵形薄瓣（参考图茉莉花）
-    return "M0 0 C " + n(-wid) + " " + n(-len * 0.18) + " " + n(-wid * 0.96) + " " + n(-len * 0.64) + " " + n(-wid * 0.44) + " " + n(-len * 0.88) +
-      " C " + n(-wid * 0.18) + " " + n(-len * 1.0) + " " + n(wid * 0.18) + " " + n(-len * 1.0) + " " + n(wid * 0.44) + " " + n(-len * 0.88) +
-      " C " + n(wid * 0.96) + " " + n(-len * 0.64) + " " + n(wid) + " " + n(-len * 0.18) + " 0 0 Z";
+    // 参考图主花瓣：阔卵形，顶端微凹的两瓣扇
+    return "M0 0 C " + n(-wid * 1.04) + " " + n(-len * 0.14) + " " + n(-wid * 1.10) + " " + n(-len * 0.64) + " " + n(-wid * 0.60) + " " + n(-len * 0.90) +
+      " C " + n(-wid * 0.32) + " " + n(-len * 1.05) + " " + n(-wid * 0.13) + " " + n(-len * 0.96) + " 0 " + n(-len * 0.97) +
+      " C " + n(wid * 0.13) + " " + n(-len * 0.96) + " " + n(wid * 0.32) + " " + n(-len * 1.05) + " " + n(wid * 0.60) + " " + n(-len * 0.90) +
+      " C " + n(wid * 1.10) + " " + n(-len * 0.64) + " " + n(wid * 1.04) + " " + n(-len * 0.14) + " 0 0 Z";
   }
 
-  function petal(len, wid, ang, shape, crease) {
-    var d = petalPath(len, wid, shape);
-    var o = '<g transform="rotate(' + n(ang) + ')">' +
-      '<path d="' + d + '" fill="' + INK.flower + '" stroke="' + INK.line +
-      '" stroke-width="1.35" stroke-linejoin="round"/>';
-    if (crease !== false) {
-      o += '<path d="M0 ' + n(-len * 0.08) + ' L0 ' + n(-len * 0.74) + '" stroke="' + INK.line +
-        '" stroke-width="0.6" opacity="0.26" stroke-linecap="round"/>';
+  function leafPath(len, wid) {
+    return "M0 0 C " + n(-wid * 0.86) + " " + n(-len * 0.24) + " " + n(-wid * 0.94) + " " + n(-len * 0.58) + " " + n(-wid * 0.28) + " " + n(-len * 0.86) +
+      " C " + n(-wid * 0.14) + " " + n(-len * 0.96) + " " + n(-wid * 0.06) + " " + n(-len * 0.99) + " 0 " + n(-len) +
+      " C " + n(wid * 0.06) + " " + n(-len * 0.99) + " " + n(wid * 0.14) + " " + n(-len * 0.96) + " " + n(wid * 0.28) + " " + n(-len * 0.86) +
+      " C " + n(wid * 0.94) + " " + n(-len * 0.58) + " " + n(wid * 0.86) + " " + n(-len * 0.24) + " 0 0 Z";
+  }
+
+  // 不规则水渍形体
+  function blobPath(cx, cy, rx, ry, seed) {
+    var pts = [], i, a, rr, d;
+    for (i = 0; i < 12; i++) {
+      a = (i / 12) * Math.PI * 2;
+      rr = 0.74 + 0.26 * Math.sin(i * 2.7 + seed) + 0.08 * Math.cos(i * 4.1 + seed * 2);
+      pts.push([cx + Math.cos(a) * rx * rr, cy + Math.sin(a) * ry * rr]);
     }
-    o += "</g>";
+    d = "M" + n(pts[0][0]) + " " + n(pts[0][1]);
+    for (i = 1; i <= pts.length; i++) {
+      var q = pts[i - 1], p = pts[i % pts.length];
+      d += " Q" + n(q[0]) + " " + n(q[1]) + " " + n((p[0] + q[0]) / 2) + " " + n((p[1] + q[1]) / 2);
+    }
+    return d + " Z";
+  }
+
+  // ---------------- SVG 资源 ----------------
+
+  function defs(id) {
+    return "<defs>" +
+      '<radialGradient id="' + id + 'gPetal" cx="50%" cy="100%" r="92%">' +
+        '<stop offset="0%" stop-color="' + WC.petalLight + '"/>' +
+        '<stop offset="38%" stop-color="' + WC.petalMid + '"/>' +
+        '<stop offset="86%" stop-color="' + WC.petalDeep + '"/>' +
+        '<stop offset="100%" stop-color="' + WC.petalEdge + '"/>' +
+      "</radialGradient>" +
+      '<radialGradient id="' + id + 'gBud" cx="50%" cy="88%" r="84%">' +
+        '<stop offset="0%" stop-color="' + WC.leafMid + '"/>' +
+        '<stop offset="40%" stop-color="' + WC.petalMid + '"/>' +
+        '<stop offset="100%" stop-color="' + WC.petalDeep + '"/>' +
+      "</radialGradient>" +
+      '<linearGradient id="' + id + 'gLeaf" x1="0" y1="1" x2="0.25" y2="0">' +
+        '<stop offset="0%" stop-color="' + WC.leafDeep + '"/>' +
+        '<stop offset="46%" stop-color="' + WC.leafMid + '"/>' +
+        '<stop offset="100%" stop-color="' + WC.leafLight + '"/>' +
+      "</linearGradient>" +
+      '<radialGradient id="' + id + 'gLeafDeep">' +
+        '<stop offset="0%" stop-color="' + WC.leafDeep + '" stop-opacity="0.42"/>' +
+        '<stop offset="100%" stop-color="' + WC.leafDeep + '" stop-opacity="0"/>' +
+      "</radialGradient>" +
+      '<linearGradient id="' + id + 'gStem" x1="0" y1="1" x2="0" y2="0">' +
+        '<stop offset="0%" stop-color="' + WC.stemDeep + '"/>' +
+        '<stop offset="55%" stop-color="' + WC.stem + '"/>' +
+        '<stop offset="100%" stop-color="' + WC.leafMid + '"/>' +
+      "</linearGradient>" +
+      // 湿画法：湍流扰动，让色面边缘自然不规则
+      '<radialGradient id="' + id + 'gDeep">' +
+        '<stop offset="0%" stop-color="' + WC.petalDeep + '" stop-opacity="0.55"/>' +
+        '<stop offset="100%" stop-color="' + WC.petalDeep + '" stop-opacity="0"/>' +
+      "</radialGradient>" +
+      '<radialGradient id="' + id + 'gLight">' +
+        '<stop offset="0%" stop-color="' + WC.petalLight + '" stop-opacity="0.8"/>' +
+        '<stop offset="100%" stop-color="' + WC.petalLight + '" stop-opacity="0"/>' +
+      "</radialGradient>" +
+      '<filter id="' + id + 'wet" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.045 0.05" numOctaves="2" seed="9" result="t"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="t" scale="12" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+        '<feGaussianBlur in="d" stdDeviation="0.22"/>' +
+      "</filter>" +
+      // 大片晕染：更强扰动 + 模糊
+      '<filter id="' + id + 'wash" x="-40%" y="-40%" width="180%" height="180%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.010 0.013" numOctaves="4" seed="3" result="t2"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="t2" scale="26" xChannelSelector="R" yChannelSelector="G" result="d2"/>' +
+        '<feGaussianBlur in="d2" stdDeviation="4"/>' +
+      "</filter>" +
+      '<filter id="' + id + 'blur" x="-40%" y="-40%" width="180%" height="180%">' +
+        '<feGaussianBlur stdDeviation="0.7"/>' +
+      "</filter>" +
+      '<filter id="' + id + 'soft" x="-60%" y="-60%" width="220%" height="220%">' +
+        '<feGaussianBlur stdDeviation="4.5"/>' +
+      "</filter>" +
+      // 纸纹颗粒
+      '<filter id="' + id + 'grain" x="0" y="0" width="100%" height="100%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="11" result="g"/>' +
+        '<feColorMatrix type="saturate" values="0"/>' +
+      "</filter>" +
+      "</defs>";
+  }
+
+  // 一片花瓣：平涂底色 + 渐变浓淡（无滤镜，性能更好）+ 边缘聚色水线
+  var petalSeq = 0;
+  function petalShape(len, wid, ang, id) {
+    var d = petalPath(len, wid, "petal");
+    var cid = id + "pc" + (++petalSeq);
+    return '<g transform="rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
+      "<defs><clipPath id=\"" + cid + "\"><path d=\"" + d + "\"/></clipPath></defs>" +
+      '<path d="' + d + '" fill="' + WC.petalMid + '" opacity="0.80"/>' +
+      '<g clip-path="url(#' + cid + ')">' +
+        '<ellipse cx="0" cy="' + n(-len * 0.70) + '" rx="' + n(wid * 1.12) + '" ry="' + n(len * 0.44) +
+        '" fill="url(#' + id + 'gDeep)"/>' +
+        '<ellipse cx="' + n(wid * 0.10) + '" cy="' + n(-len * 0.30) + '" rx="' + n(wid * 0.74) + '" ry="' + n(len * 0.36) +
+        '" fill="url(#' + id + 'gLight)"/>' +
+      "</g>" +
+      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="3.4" opacity="0.14"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="1.6" opacity="0.58"/>' +
+      "</g>";
+  }
+
+  // 花心
+  function stamen(r, id) {
+    var o = '<circle r="' + n(r * 0.36) + '" fill="' + WC.center + '" opacity="0.62" filter="url(#' + id + 'soft)"/>';
+    var i, a, rad;
+    for (i = 0; i < 15; i++) {
+      a = i * 0.92 + 0.4;
+      rad = r * (0.06 + 0.25 * Math.sqrt(i / 15));
+      o += '<circle cx="' + n(Math.cos(a) * rad) + '" cy="' + n(Math.sin(a) * rad) + '" r="' +
+        n(1.7 + (i % 3) * 0.5) + '" fill="' + WC.anther + '" opacity="0.9"/>';
+    }
+    for (i = 0; i < 6; i++) {
+      a = (i * 60 + 12) * Math.PI / 180;
+      o += '<path d="M0 0 Q ' + n(Math.cos(a) * r * 0.09) + ' ' + n(Math.sin(a) * r * 0.09) +
+        ' ' + n(Math.cos(a) * r * 0.20) + ' ' + n(Math.sin(a) * r * 0.20) + '" fill="none" stroke="' +
+        WC.pistil + '" stroke-width="1.7" stroke-linecap="round" opacity="0.75"/>';
+    }
+    o += '<circle r="' + n(r * 0.06) + '" fill="' + WC.pistil + '" opacity="0.85"/>';
+    return '<g filter="url(#' + id + 'blur)" >' + o + "</g>";
+  }
+
+  function blossom(r, P, rot, id, rnd) {
+    var o = "", i, step = 360 / P.petals, jitter, len, wid;
+    for (i = 0; i < P.petals; i++) {
+      jitter = P.wobble ? (rnd() - 0.5) * P.wobble : 0;
+      len = r * (1.0 + jitter * 0.09);
+      wid = r * P.petalW * (1 + jitter * 0.06);
+      o += petalShape(len, wid, rot + i * step + jitter * 5, id);
+    }
+    o += stamen(r, id);
     return o;
   }
 
-  // ---------------- 花心 ----------------
-
-  function center(r, P) {
-    var k = P.center || "dots", o = "", i, a, rr;
-    if (k === "none") return "";
-    if (k === "disc" || k === "seed") {
-      o += '<circle r="' + n(r * (k === "seed" ? 0.30 : 0.24)) + '" fill="' + INK.leafD +
-        '" stroke="' + INK.line + '" stroke-width="0.9"/>';
-      var cnt = k === "seed" ? 16 : 9;
-      for (i = 0; i < cnt; i++) {
-        a = (i * (360 / cnt) + 12) * Math.PI / 180;
-        rr = r * (i % 2 ? 0.11 : 0.20);
-        o += '<circle cx="' + n(Math.cos(a) * rr) + '" cy="' + n(Math.sin(a) * rr) +
-          '" r="1.4" fill="' + INK.vein + '" opacity="0.85"/>';
-      }
-      return o;
-    }
-    if (k === "stamen") {
-      for (i = 0; i < 11; i++) {
-        a = (i * 33 + 9) * Math.PI / 180;
-        var x2 = Math.cos(a) * r * 0.40, y2 = Math.sin(a) * r * 0.40;
-        o += '<path d="M' + n(Math.cos(a) * r * 0.08) + ' ' + n(Math.sin(a) * r * 0.08) +
-          ' L' + n(x2) + ' ' + n(y2) + '" stroke="' + INK.stamen + '" stroke-width="0.95"/>';
-        o += '<circle cx="' + n(x2) + '" cy="' + n(y2) + '" r="1.6" fill="' + INK.stamen + '"/>';
-      }
-      o += '<circle r="' + n(r * 0.10) + '" fill="' + INK.flower + '" stroke="' + INK.line + '" stroke-width="0.85"/>';
-      return o;
-    }
-    if (k === "dotOnly") {
-      return '<circle r="' + n(r * 0.16) + '" fill="' + INK.flower + '" stroke="' + INK.line + '" stroke-width="1"/>';
-    }
-    // dots：细碎花蕊簇（茉莉/栀子）
-    o += '<circle r="' + n(r * 0.14) + '" fill="' + INK.flower + '" stroke="' + INK.line + '" stroke-width="0.85"/>';
-    for (i = 0; i < 7; i++) {
-      a = (i * 51.4 + 14) * Math.PI / 180;
-      rr = r * (i % 2 ? 0.15 : 0.21);
-      o += '<circle cx="' + n(Math.cos(a) * rr) + '" cy="' + n(Math.sin(a) * rr) + '" r="1.45" fill="' + INK.stamen + '"/>';
-    }
-    return o;
-  }
-
-  // ---------------- 花头 ----------------
-
-  function blossom(r, P, rot) {
-    var o = "", petals = P.petals, layers = P.layers || 1, L, i;
-    for (L = layers - 1; L >= 0; L--) {
-      var len = r * (1 - L * 0.24);
-      var wid = len * P.petalW;
-      var off = rot + L * (360 / petals) * 0.5;
-      for (i = 0; i < petals; i++) {
-        o += petal(len, wid, off + i * (360 / petals), P.shape);
-      }
-    }
-    o += center(r, P);
-    return o;
-  }
-
-  // 绣球：圆顶花球，小花四瓣，均匀铺满
-  function domeCluster(r, P, rot, rnd) {
-    var o = "", ring, i, cnt;
-    var places = [[0, 0]];
+  function domeCluster(r, P, rot, id, rnd) {
+    var o = "", ring, i, cnt, places = [[0, 0]];
     for (ring = 0; ring < 2; ring++) {
-      cnt = ring === 0 ? 6 : 7;
+      cnt = ring === 0 ? 5 : 6;
       for (i = 0; i < cnt; i++) {
         var a = rot + i * (360 / cnt) + ring * 26;
         var rad = r * (ring === 0 ? 0.44 : 0.76);
@@ -182,239 +210,260 @@
       }
     }
     for (i = 0; i < places.length; i++) {
-      var fr = r * (i === 0 ? 0.34 : 0.30);
       o += '<g transform="translate(' + n(places[i][0]) + ' ' + n(places[i][1]) + ')">' +
-        blossom(fr, { petals: 4, petalW: 0.50, shape: "round", center: "dotOnly" }, rot + i * 37) + "</g>";
+        blossom(r * (i === 0 ? 0.38 : 0.33), { petals: 4, petalW: 0.52 }, rot + i * 37, id, rnd) + "</g>";
     }
     return o;
   }
 
-  // 满天星：细枝散落的小花
-  function spray(r, P, rot, rnd) {
-    var o = "", i, k, tt;
+  function spray(r, P, rot, id, rnd) {
+    var o = "", k, i, tt;
     for (k = 0; k < 3; k++) {
       var a = rot + (k - 1) * 42 + (rnd() - 0.5) * 16;
-      var lx = Math.cos(a * Math.PI / 180) * r * 0.92;
-      var ly = Math.sin(a * Math.PI / 180) * r * 0.92;
+      var lx = Math.cos(a * Math.PI / 180) * r * 0.94;
+      var ly = Math.sin(a * Math.PI / 180) * r * 0.94;
       o += '<path d="M0 0 Q ' + n(lx * 0.55) + ' ' + n(ly * 0.55 - 8) + ' ' + n(lx) + ' ' + n(ly) +
-        '" fill="none" stroke="' + INK.leafD + '" stroke-width="1.2" stroke-linecap="round"/>';
+        '" fill="none" stroke="' + WC.stem + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>';
       for (i = 0; i < 4; i++) {
         tt = 0.34 + i * 0.22;
-        var px = lx * tt + (rnd() - 0.5) * r * 0.34;
-        var py = ly * tt + (rnd() - 0.5) * r * 0.34 - i * r * 0.03;
-        o += '<g transform="translate(' + n(px) + ' ' + n(py) + ')">' +
-          blossom(r * 0.30, { petals: 5, petalW: 0.42, shape: "pointed", center: "disc" }, rnd() * 360) + "</g>";
+        o += '<g transform="translate(' + n(lx * tt + (rnd() - 0.5) * r * 0.34) + ' ' +
+          n(ly * tt + (rnd() - 0.5) * r * 0.34 - i * r * 0.03) + ')">' +
+          blossom(r * 0.28, { petals: 5, petalW: 0.46 }, rnd() * 360, id, rnd) + "</g>";
       }
     }
     return o;
   }
 
-  // 铃兰：垂挂小铃
-  function bellRaceme(r, P, rot, rnd) {
+  function bellRaceme(r, P, rot, id, rnd) {
     var o = "", i, n1 = 4;
     var ax = r * 0.42, ay = r * 0.62;
-    o += '<path d="M0 0 C ' + n(r * 0.10) + ' ' + n(-r * 0.22) + ' ' + n(r * 0.40) + ' ' + n(-r * 0.06) + ' ' + n(ax) + ' ' + n(ay) +
-      '" fill="none" stroke="' + INK.leafD + '" stroke-width="1.8" stroke-linecap="round"/>';
+    o += '<path d="M0 0 C ' + n(r * 0.10) + ' ' + n(-r * 0.24) + ' ' + n(r * 0.40) + ' ' + n(-r * 0.06) + ' ' + n(ax) + ' ' + n(ay) +
+      '" fill="none" stroke="' + WC.stem + '" stroke-width="2.4" stroke-linecap="round"/>';
     for (i = 0; i < n1; i++) {
       var t = i / (n1 - 1);
       var bx = ax * (0.55 + t * 0.95);
       var by = ay * (0.55 + t * 0.85) + Math.sin(t * 3.0) * r * 0.10;
       var rr = r * 0.40 * (1 - t * 0.14);
-      // 花梗
       o += '<path d="M' + n(bx) + ' ' + n(by - rr * 1.5) + ' L' + n(bx) + ' ' + n(by - rr * 0.62) +
-        '" stroke="' + INK.leafD + '" stroke-width="1.1" stroke-linecap="round"/>';
-      // 铃身
-      o += '<path d="M' + n(bx - rr * 0.52) + ' ' + n(by - rr * 0.60) +
+        '" stroke="' + WC.stem + '" stroke-width="1.8" stroke-linecap="round"/>';
+      o += '<g filter="url(#' + id + 'wet)">' +
+        '<path d="M' + n(bx - rr * 0.52) + ' ' + n(by - rr * 0.60) +
         ' C ' + n(bx - rr * 1.06) + ' ' + n(by + rr * 0.34) + ' ' + n(bx - rr * 0.92) + ' ' + n(by + rr * 1.02) + ' ' + n(bx) + ' ' + n(by + rr * 1.08) +
         ' C ' + n(bx + rr * 0.92) + ' ' + n(by + rr * 1.02) + ' ' + n(bx + rr * 1.06) + ' ' + n(by + rr * 0.34) + ' ' + n(bx + rr * 0.52) + ' ' + n(by - rr * 0.60) +
         ' Q ' + n(bx) + ' ' + n(by - rr * 0.14) + ' ' + n(bx - rr * 0.52) + ' ' + n(by - rr * 0.60) + ' Z"' +
-        ' fill="' + INK.flower + '" stroke="' + INK.line + '" stroke-width="1.3" stroke-linejoin="round"/>';
-      // 铃口
-      o += '<path d="M' + n(bx - rr * 0.84) + ' ' + n(by + rr * 0.86) + ' Q ' + n(bx) + ' ' + n(by + rr * 1.24) + ' ' + n(bx + rr * 0.84) + ' ' + n(by + rr * 0.86) + '"' +
-        ' fill="none" stroke="' + INK.line + '" stroke-width="0.95" opacity="0.75"/>';
+        ' fill="url(#' + id + 'gPetal)" opacity="0.8"/>' +
+        '<path d="M' + n(bx - rr * 0.90) + ' ' + n(by + rr * 0.80) + ' Q ' + n(bx) + ' ' + n(by + rr * 1.18) + ' ' + n(bx + rr * 0.90) + ' ' + n(by + rr * 0.80) + '"' +
+        ' fill="' + WC.petalDeep + '" opacity="0.5"/></g>';
     }
     return o;
   }
 
-  function head(kind, r, P, rnd) {
-    if (kind === "dome") return domeCluster(r, P, rnd() * 360, rnd);
-    if (kind === "spray") return spray(r, P, rnd() * 360, rnd);
-    if (kind === "bell") return bellRaceme(r, P, rnd() * 360, rnd);
-    return blossom(r, P, rnd() * 360);
+  function head(kind, r, P, id, rnd) {
+    if (kind === "dome") return domeCluster(r, P, rnd() * 360, id, rnd);
+    if (kind === "spray") return spray(r, P, rnd() * 360, id, rnd);
+    if (kind === "bell") return bellRaceme(r, P, rnd() * 360, id, rnd);
+    return blossom(r, P, rnd() * 360, id, rnd);
   }
 
-  // ---------------- 花苞 ----------------
-
-  function bud(x, y, len, wid, ang) {
-    var d = "M0 0 C " + n(-wid * 0.5) + " " + n(-len * 0.10) + " " + n(-wid) + " " + n(-len * 0.44) + " " + n(-wid * 0.64) + " " + n(-len * 0.76) +
-      " C " + n(-wid * 0.40) + " " + n(-len * 0.94) + " " + n(wid * 0.40) + " " + n(-len * 0.94) + " " + n(wid * 0.64) + " " + n(-len * 0.76) +
-      " C " + n(wid) + " " + n(-len * 0.44) + " " + n(wid * 0.5) + " " + n(-len * 0.10) + " 0 0 Z";
-    var o = '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')">';
-    o += '<path d="M0 ' + n(len * 0.30) + ' L0 ' + n(-len * 0.04) + '" stroke="' + INK.leafD + '" stroke-width="1.1" stroke-linecap="round"/>';
-    o += '<path d="' + d + '" fill="' + INK.flower + '" stroke="' + INK.line + '" stroke-width="1.3" stroke-linejoin="round"/>';
-    o += '<path d="M0 ' + n(-len * 0.02) + ' L0 ' + n(-len * 0.86) + '" stroke="' + INK.line + '" stroke-width="0.6" opacity="0.28"/>';
-    o += '<path d="M' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' L' + n(-wid * 0.78) + ' ' + n(len * 0.26) +
-      '" stroke="' + INK.leafD + '" stroke-width="1.15" stroke-linecap="round"/>';
-    o += '<path d="M' + n(wid * 0.46) + ' ' + n(-len * 0.02) + ' L' + n(wid * 0.78) + ' ' + n(len * 0.26) +
-      '" stroke="' + INK.leafD + '" stroke-width="1.15" stroke-linecap="round"/>';
-    o += "</g>";
-    return o;
+  // 花苞
+  function bud(x, y, len, wid, ang, id) {
+    var d = "M0 0 C " + n(-wid * 0.52) + " " + n(-len * 0.12) + " " + n(-wid) + " " + n(-len * 0.46) + " " + n(-wid * 0.60) + " " + n(-len * 0.78) +
+      " C " + n(-wid * 0.36) + " " + n(-len * 0.96) + " " + n(wid * 0.36) + " " + n(-len * 0.96) + " " + n(wid * 0.60) + " " + n(-len * 0.78) +
+      " C " + n(wid) + " " + n(-len * 0.46) + " " + n(wid * 0.52) + " " + n(-len * 0.12) + " 0 0 Z";
+    return '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
+      '<path d="M0 ' + n(len * 0.34) + ' L0 ' + n(-len * 0.02) + '" stroke="' + WC.stem + '" stroke-width="2" stroke-linecap="round"/>' +
+      '<g filter="url(#' + id + 'wet)">' +
+      '<path d="' + d + '" fill="url(#' + id + 'gBud)" opacity="0.85"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="1.6" opacity="0.28" filter="url(#' + id + 'blur)"/>' +
+      '<path d="M' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' Q 0 ' + n(len * 0.22) + ' ' + n(wid * 0.46) + ' ' + n(-len * 0.02) +
+      ' Q 0 ' + n(-len * 0.30) + ' ' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' Z" fill="' + WC.leafMid + '" opacity="0.9"/>' +
+      "</g>" +
+      '<path d="M0 ' + n(-len * 0.12) + ' L0 ' + n(-len * 0.80) + '" stroke="' + WC.petalDeep + '" stroke-width="1" opacity="0.25"/>' +
+      "</g>";
   }
 
-  // 一簇花苞：沿垂直于朝向的方向并排
-  function budGroup(x, y, size, ang, count, rnd) {
+  function budGroup(x, y, size, ang, count, id, rnd) {
     var o = "", rad = ang * Math.PI / 180, i;
     for (i = 0; i < count; i++) {
       var s = i - (count - 1) / 2;
-      var px = x + Math.cos(rad + Math.PI / 2) * s * size * 0.30;
-      var py = y + Math.sin(rad + Math.PI / 2) * s * size * 0.30 + Math.abs(s) * size * 0.10;
-      var l = size * (1 - Math.abs(s) * 0.13) * (0.88 + rnd() * 0.26);
-      o += bud(px, py, l, l * 0.31, ang + s * 15 + (rnd() - 0.5) * 10);
+      o += bud(
+        x + Math.cos(rad + Math.PI / 2) * s * size * 0.32,
+        y + Math.sin(rad + Math.PI / 2) * s * size * 0.32 + Math.abs(s) * size * 0.08,
+        size * (1 - Math.abs(s) * 0.12) * (0.9 + rnd() * 0.2),
+        size * 0.38,
+        ang + s * 13 + (rnd() - 0.5) * 8,
+        id
+      );
     }
     return o;
   }
 
-  // ---------------- 叶片 ----------------
+  // 叶片：平涂 + 内部浓淡（渐变）+ 留白叶脉
+  function leaf(x, y, len, wid, ang, id) {
+    var d = leafPath(len, wid);
+    var cid = id + "lc" + (++petalSeq);
+    return '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
+      "<defs><clipPath id=\"" + cid + "\"><path d=\"" + d + "\"/></clipPath></defs>" +
+      '<path d="' + d + '" fill="' + WC.leafMid + '" opacity="0.9"/>' +
+      '<g clip-path="url(#' + cid + ')">' +
+        '<ellipse cx="' + n(wid * 0.18) + '" cy="' + n(-len * 0.30) + '" rx="' + n(wid * 0.95) + '" ry="' + n(len * 0.36) +
+        '" fill="url(#' + id + 'gLeafDeep)"/>' +
+        '<ellipse cx="' + n(-wid * 0.20) + '" cy="' + n(-len * 0.68) + '" rx="' + n(wid * 0.72) + '" ry="' + n(len * 0.32) +
+        '" fill="url(#' + id + 'gLight)"/>' +
+      "</g>" +
+      '<path d="' + d + '" fill="none" stroke="' + WC.leafDeep + '" stroke-width="1.2" opacity="0.45"/>' +
+      '<path d="M0 ' + n(-len * 0.06) + ' L0 ' + n(-len * 0.84) + '" stroke="' + WC.leafLight + '" stroke-width="2.2" opacity="0.6"/>' +
+      '<path d="M0 ' + n(-len * 0.40) + ' Q ' + n(-wid * 0.34) + ' ' + n(-len * 0.52) + ' ' + n(-wid * 0.46) + ' ' + n(-len * 0.62) +
+      '" fill="none" stroke="' + WC.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
+      '<path d="M0 ' + n(-len * 0.56) + ' Q ' + n(wid * 0.34) + ' ' + n(-len * 0.68) + ' ' + n(wid * 0.44) + ' ' + n(-len * 0.76) +
+      '" fill="none" stroke="' + WC.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
+      "</g>";
+  }
 
-  function leaf(x, y, len, wid, ang) {
-    var d = "M0 0 C " + n(-wid) + " " + n(-len * 0.26) + " " + n(-wid * 0.84) + " " + n(-len * 0.64) + " 0 " + n(-len) +
-      " C " + n(wid * 0.84) + " " + n(-len * 0.64) + " " + n(wid) + " " + n(-len * 0.26) + " 0 0 Z";
-    var o = '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')">';
-    o += '<path d="' + d + '" fill="' + INK.leaf + '" stroke="' + INK.line + '" stroke-width="1.1" stroke-linejoin="round"/>';
-    o += '<path d="M0 ' + n(-len * 0.04) + ' L0 ' + n(-len * 0.88) + '" stroke="' + INK.vein + '" stroke-width="1.1" opacity="0.7"/>';
-    var t;
-    for (t = 0.28; t < 0.78; t += 0.18) {
-      var sw = wid * 0.52 * (1 - t * 0.55);
-      o += '<path d="M0 ' + n(-len * t) + ' Q ' + n(-sw * 0.7) + ' ' + n(-len * (t + 0.10)) + ' ' + n(-sw) + ' ' + n(-len * (t + 0.14)) +
-        '" fill="none" stroke="' + INK.vein + '" stroke-width="0.85" opacity="0.55"/>';
-      o += '<path d="M0 ' + n(-len * t) + ' Q ' + n(sw * 0.7) + ' ' + n(-len * (t + 0.10)) + ' ' + n(sw) + ' ' + n(-len * (t + 0.14)) +
-        '" fill="none" stroke="' + INK.vein + '" stroke-width="0.85" opacity="0.55"/>';
+  function stem(d, w, id) {
+    return '<path d="' + d + '" fill="none" stroke="url(#' + id + 'gStem)" stroke-width="' + w +
+      '" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + WC.stemDeep + '" stroke-width="' + (w + 3) +
+      '" stroke-linecap="round" opacity="0.14" filter="url(#' + id + 'blur)"/>';
+  }
+
+  // 背景水彩晕 + 飞溅
+  function washLayer(id, rnd) {
+    var o = "";
+    var blobs = [
+      [300, 296, 104, 122, 1.2],
+      [212, 424, 92, 108, 2.6],
+      [334, 448, 84, 96, 4.1],
+      [256, 236, 62, 72, 0.4],
+      [366, 340, 44, 56, 5.2]
+    ];
+    var i;
+    for (i = 0; i < blobs.length; i++) {
+      var b = blobs[i];
+      o += '<path d="' + blobPath(b[0] + (rnd() - 0.5) * 12, b[1] + (rnd() - 0.5) * 12,
+        b[2] * (0.9 + rnd() * 0.2), b[3] * (0.9 + rnd() * 0.2), b[4] + rnd()) +
+        '" fill="' + WC.wash + '" opacity="0.52" filter="url(#' + id + 'wash)"/>';
     }
-    o += "</g>";
+    for (i = 0; i < 10; i++) {
+      o += '<circle cx="' + n(130 + rnd() * 260) + '" cy="' + n(190 + rnd() * 380) + '" r="' +
+        n(1.2 + rnd() * 2.4) + '" fill="' + WC.leafMid + '" opacity="' + n(0.16 + rnd() * 0.22) + '" filter="url(#' + id + 'blur)"/>';
+    }
     return o;
   }
 
-  // ---------------- 各花型参数 ----------------
+  // ---------------- 花型 ----------------
 
-  // kind: simple | dome | spray | bell
   var TYPE = {
-    rose:      { kind: "simple", petals: 7, layers: 3, petalW: 0.46, shape: "round",   center: "swirlDots", scale: 1.00 },
-    tulip:     { kind: "simple", petals: 3, layers: 1, petalW: 0.40, shape: "cup",     center: "none",      scale: 1.04 },
-    daisy:     { kind: "simple", petals: 15, layers: 1, petalW: 0.19, shape: "spoon",  center: "disc",      scale: 0.92 },
-    sunflower: { kind: "simple", petals: 15, layers: 2, petalW: 0.24, shape: "pointed", center: "seed",     scale: 1.00 },
-    hydrangea: { kind: "dome",   petals: 4, layers: 1, petalW: 0.46, shape: "round",    center: "disc",      scale: 1.05 },
-    bell:      { kind: "bell",   petals: 5, layers: 1, petalW: 0.40, shape: "cup",      center: "none",      scale: 1.00 },
-    starry:    { kind: "spray",  petals: 5, layers: 1, petalW: 0.40, shape: "pointed",  center: "disc",      scale: 1.10 },
-    camellia:  { kind: "simple", petals: 6, layers: 2, petalW: 0.48, shape: "round",    center: "stamen",    scale: 0.98 },
-    peony:     { kind: "simple", petals: 9, layers: 3, petalW: 0.52, shape: "ruffle",   center: "stamen",    scale: 1.02 },
-    gardenia:  { kind: "simple", petals: 6, layers: 2, petalW: 0.46, shape: "oval",     center: "dots",      scale: 1.00 }
+    rose:      { kind: "simple", petals: 5, petalW: 0.52, wobble: 1.0 },
+    tulip:     { kind: "simple", petals: 5, petalW: 0.46, wobble: 0.8 },
+    daisy:     { kind: "simple", petals: 8, petalW: 0.30, wobble: 1.4 },
+    sunflower: { kind: "simple", petals: 10, petalW: 0.26, wobble: 1.4 },
+    hydrangea: { kind: "dome",   petals: 4, petalW: 0.52, wobble: 0.8 },
+    bell:      { kind: "bell",   petals: 5, petalW: 0.44, wobble: 0.4 },
+    starry:    { kind: "spray",  petals: 5, petalW: 0.44, wobble: 1.0 },
+    camellia:  { kind: "simple", petals: 6, petalW: 0.50, wobble: 0.9 },
+    peony:     { kind: "simple", petals: 7, petalW: 0.48, wobble: 1.6 },
+    gardenia:  { kind: "simple", petals: 5, petalW: 0.54, wobble: 0.9 }
   };
 
   // ---------------- 构图 ----------------
 
-  // 主茎（下粗上细，自底部微微摆动向上）
   var MAIN = [
-    [[240, 632], [222, 548], [228, 468], [238, 396]],
-    [[238, 396], [246, 328], [244, 220], [250, 126]]
+    "M240 634 C226 556 234 486 244 414 C252 352 246 250 250 176",
+    "M230 520 C198 476 176 436 168 392 C163 362 163 332 166 306",
+    "M242 476 C296 444 328 408 346 364 C356 338 360 316 364 296"
   ];
 
-  // 侧枝
-  var BRANCH = [
-    [[240, 330], [202, 308], [178, 270], [168, 212]],   // 左上 → 花苞
-    [[238, 406], [300, 400], [350, 380], [384, 346]]    // 右下 → 花苞
-  ];
-
-  // 花梗：[茎上起点…, 花心落点]
   var PEDICEL = [
-    [[248, 282], [268, 278], [288, 282], [302, 286]],
-    [[246, 330], [290, 326], [330, 326], [356, 326]],
-    [[244, 380], [280, 378], [316, 380], [334, 382]],
-    [[250, 210], [258, 214], [268, 218], [274, 222]]
+    "M248 344 C268 332 284 316 294 304",
+    "M178 400 C182 392 186 386 190 382",
+    "M342 396 C344 412 340 426 336 436",
+    "M250 232 C251 222 251 210 251 202"
   ];
 
-  // 花头 [x, y, 半径]
   var HEADS = [
-    [300, 278, 40],
-    [360, 322, 34],
-    [334, 388, 29],
-    [264, 210, 26]
+    [294, 300, 66],
+    [188, 382, 52],
+    [336, 440, 56],
+    [250, 200, 38]
   ];
 
-  // 花苞簇 [x, y, 尺寸, 朝向, 数量]（角度：正=向右倾斜）
   var BUDS = [
-    [250, 124, 42, 2, 4],
-    [168, 212, 38, -34, 4],
-    [384, 346, 32, 46, 2]
+    [166, 300, 34, -134, 2],
+    [250, 168, 32, -4, 2],
+    [364, 292, 32, 30, 2],
+    [398, 474, 30, 24, 1],
+    [296, 520, 28, -22, 1]
   ];
 
-  // 叶片 [x, y, 长, 宽, 角度]（角度：正=向右倾，负=向左倾）
   var LEAVES = [
-    [248, 610, 110, 23, 58],
-    [240, 556, 96, 21, -50],
-    [246, 498, 88, 20, 64],
-    [238, 442, 78, 18, -56],
-    [332, 370, 64, 16, -16],
-    [246, 394, 60, 16, 54]
+    [238, 600, 100, 28, 54],
+    [230, 548, 94, 26, -56],
+    [240, 496, 88, 25, 46],
+    [176, 434, 80, 23, -64],
+    [236, 452, 82, 23, 58],
+    [320, 414, 76, 22, -46],
+    [346, 340, 66, 20, 40],
+    [252, 272, 60, 18, -54]
   ];
 
   function build(bouquet, rnd) {
     rnd = rnd || Math.random;
     var P = TYPE[bouquet && bouquet.type] || TYPE.rose;
+    var id = "wc" + (++uidSeq) + "_";
     var i;
-    // 铃兰/绣球体量大，只留前三处落点，留白更透气
     var take = P.kind === "bell" || P.kind === "dome" ? 3 : 4;
     take = Math.min(take, HEADS.length, PEDICEL.length);
 
-    // 茎
-    var stems = ribbon(MAIN[0], 7.8, 4.8);
-    stems += ribbon(MAIN[1], 4.8, 2.2);
-    for (i = 0; i < BRANCH.length; i++) {
-      stems += ribbon(BRANCH[i], 3.4, 1.2);
+    var stems = "";
+    for (i = 0; i < MAIN.length; i++) {
+      stems += stem(MAIN[i], i === 0 ? 5.2 : 4.0, id);
     }
-    // 花梗（只画有花头的）
     for (i = 0; i < take; i++) {
-      stems += ribbon(PEDICEL[i], 2.6, 1.4);
+      stems += stem(PEDICEL[i], 3.4, id);
     }
 
-    // 叶
     var leaves = "";
     for (i = 0; i < LEAVES.length; i++) {
       var L = LEAVES[i];
       leaves += leaf(
-        L[0] + (rnd() - 0.5) * 4,
-        L[1] + (rnd() - 0.5) * 4,
-        L[2] * (0.94 + rnd() * 0.12),
-        L[3] * (0.92 + rnd() * 0.16),
-        L[4] + (rnd() - 0.5) * 7
+        L[0] + (rnd() - 0.5) * 4, L[1] + (rnd() - 0.5) * 4,
+        L[2] * (0.94 + rnd() * 0.12), L[3] * (0.92 + rnd() * 0.14),
+        L[4] + (rnd() - 0.5) * 8, id
       );
     }
 
-    // 花苞
     var buds = "";
     for (i = 0; i < BUDS.length; i++) {
       var B = BUDS[i];
-      buds += budGroup(B[0], B[1], B[2] * (0.94 + rnd() * 0.12), B[3] + (rnd() - 0.5) * 8, B[4], rnd);
+      buds += budGroup(B[0], B[1], B[2] * (0.94 + rnd() * 0.12), B[3] + (rnd() - 0.5) * 8, B[4], id, rnd);
     }
 
-    // 花头
     var flowers = "";
     for (i = 0; i < take; i++) {
       var h = HEADS[i];
-      var r = h[2] * P.scale * (0.95 + rnd() * 0.12);
+      var r = h[2] * (0.95 + rnd() * 0.10);
       flowers += '<g class="bloom"><g transform="translate(' +
-        n(h[0] + (rnd() - 0.5) * 5) + ' ' + n(h[1] + (rnd() - 0.5) * 5) + ')">' +
-        head(P.kind, r, P, rnd) + "</g></g>";
+        n(h[0] + (rnd() - 0.5) * 6) + ' ' + n(h[1] + (rnd() - 0.5) * 6) + ')" filter="url(#' + id + 'wet)">' +
+        head(P.kind, r, P, id, rnd) + "</g></g>";
     }
 
+    // 纸纹颗粒（最上层，极淡）
+    var grain = '<rect x="100" y="110" width="340" height="560" filter="url(#' + id + 'grain)" ' +
+      'opacity="0.13" style="mix-blend-mode:multiply"/>';
+
     return (
-      '<svg viewBox="89 70 400 580" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg" preserveAspectRatio="xMidYMid meet">' +
-      '<g class="stems">' + stems + "</g>" +
+      '<svg viewBox="112 132 310 522" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg" preserveAspectRatio="xMidYMid meet">' +
+      defs(id) +
+      '<g class="wash">' + washLayer(id, rnd) + "</g>" +
       '<g class="leaves">' + leaves + "</g>" +
+      '<g class="stems">' + stems + "</g>" +
       '<g class="buds">' + buds + "</g>" +
       '<g class="flowers">' + flowers + "</g>" +
+      grain +
       "</svg>"
     );
   }
 
-  window.FLOWERS = { build: build, INK: INK, TYPE: TYPE };
+  window.FLOWERS = { build: build, WC: WC, TYPE: TYPE };
 })();
