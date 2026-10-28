@@ -492,6 +492,7 @@ body::before {
   padding: 3px 11px;
   border-radius: 999px;
   letter-spacing: 2px;
+  transition: color 0.5s ease, background 0.5s ease, border-color 0.5s ease;
 }
 
 /* 爱语：复古书籍式上下细线 */
@@ -503,6 +504,7 @@ body::before {
   padding: 9px 6px;
   text-align: center;
   margin: 6px 0 10px;
+  flex: 0 0 auto;                /* 长文案换行时不被挤压，文字不会溢出边框 */
   border: none;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -577,6 +579,57 @@ body::before {
 
 .btn-ghost:active {
   background: rgba(78, 99, 71, 0.06);
+}
+
+/* ---------- 文字小按钮（体验入口 / 恢复默认） ---------- */
+.mini-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 7px;
+}
+
+.mini-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(169, 138, 138, 0.45);
+  padding: 5px 10px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.mini-btn:active {
+  opacity: 0.55;
+}
+
+.mini-btn.armed {
+  color: #A8455F;
+  border-bottom-color: #A8455F;
+  font-weight: 700;
+}
+
+.sheet-foot {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(169, 138, 138, 0.22);
+}
+
+.foot-tip {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  opacity: 0.75;
+  letter-spacing: 0.5px;
 }
 
 /* ---------- 落花粒子 ---------- */
@@ -863,8 +916,10 @@ body::before {
   #greetingText { font-size: 72px; }
   #main { padding: 8px 8px; padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   #flowerName { font-size: 22px; }
-  .quote-card { padding: 8px 10px; margin: 6px 0 10px; }
+  .quote-card { padding: 7px 10px; margin: 5px 0 8px; }
+  #quote { font-size: 14.5px; line-height: 1.65; letter-spacing: 0.5px; }
   .btn { min-height: 46px; }
+  .mini-actions { margin-top: 5px; }
 }
 
 @media (max-width: 360px) {

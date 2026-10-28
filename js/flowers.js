@@ -28,8 +28,64 @@
     wash: "#CFE0B5"
   };
 
+  // 当前这一束实际使用的色板（由 paletteFor() 按日期花束派生）
+  var C = WC;
+
   var uidSeq = 0;
   function n(v) { return Math.round(v * 10) / 10; }
+
+  // ---------------- 颜色主题派生 ----------------
+  // 配置里 colors = [主色, 花瓣浅填充, 花心点缀, 枝叶绿]
+  // 其余色阶全部由这四个锚点按水彩混色推出来 —— 换一组 colors 就换一套主题
+  function hex2rgb(h) {
+    h = String(h || "").replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var v = parseInt(h, 16);
+    if (isNaN(v)) return [220, 122, 150];
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+  function rgb2hex(r, g, b) {
+    var f = function (x) {
+      x = Math.max(0, Math.min(255, Math.round(x)));
+      var s = x.toString(16);
+      return s.length < 2 ? "0" + s : s;
+    };
+    return "#" + f(r) + f(g) + f(b);
+  }
+  // t=0 取 a，t=1 取 b，中间为颜料等比调和
+  function mix(a, b, t) {
+    var A = hex2rgb(a), B = hex2rgb(b);
+    return rgb2hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t);
+  }
+
+  function paletteFor(bouquet) {
+    var cols = (bouquet && bouquet.colors) || [];
+    var main = cols[0] || "#DC7A96";     // 主色：花瓣边缘 / 主题色
+    var pale = cols[1] || "#FFFDFC";     // 花瓣浅部
+    var accent = cols[2] || "#F7A8C4";   // 点缀：半调、花心
+    var green = cols[3] || "#7FA35C";    // 枝叶基色
+
+    // 枝叶统一往「黄绿」方向偏一点，避免出现塑料感的纯绿
+    var g0 = mix(green, "#A9C383", 0.45);
+    var center = mix("#FCF6DE", pale, 0.35);
+
+    return {
+      petalEdge: main,
+      petalDeep: mix(main, accent, 0.45),
+      petalMid: mix(accent, pale, 0.52),
+      petalLight: mix(pale, "#FFFFFF", 0.28),
+      center: center,
+      centerDeep: mix(center, "#2B1A0E", 0.48),
+      anther: mix("#DFC468", accent, 0.35),
+      pistil: mix(g0, "#8FB063", 0.5),
+      stem: mix(g0, "#FFFFFF", 0.22),
+      stemDeep: mix(g0, "#2F4A22", 0.34),
+      leafLight: mix(g0, "#FFFFFF", 0.48),
+      leafMid: g0,
+      leafDeep: mix(g0, "#2F4A22", 0.30),
+      wash: mix(g0, "#FFFFFF", 0.62)
+    };
+  }
 
   // ---------------- 造型 ----------------
 
@@ -90,38 +146,38 @@
   function defs(id) {
     return "<defs>" +
       '<radialGradient id="' + id + 'gPetal" cx="50%" cy="100%" r="92%">' +
-        '<stop offset="0%" stop-color="' + WC.petalLight + '"/>' +
-        '<stop offset="38%" stop-color="' + WC.petalMid + '"/>' +
-        '<stop offset="86%" stop-color="' + WC.petalDeep + '"/>' +
-        '<stop offset="100%" stop-color="' + WC.petalEdge + '"/>' +
+        '<stop offset="0%" stop-color="' + C.petalLight + '"/>' +
+        '<stop offset="38%" stop-color="' + C.petalMid + '"/>' +
+        '<stop offset="86%" stop-color="' + C.petalDeep + '"/>' +
+        '<stop offset="100%" stop-color="' + C.petalEdge + '"/>' +
       "</radialGradient>" +
       '<radialGradient id="' + id + 'gBud" cx="50%" cy="88%" r="84%">' +
-        '<stop offset="0%" stop-color="' + WC.leafMid + '"/>' +
-        '<stop offset="40%" stop-color="' + WC.petalMid + '"/>' +
-        '<stop offset="100%" stop-color="' + WC.petalDeep + '"/>' +
+        '<stop offset="0%" stop-color="' + C.leafMid + '"/>' +
+        '<stop offset="40%" stop-color="' + C.petalMid + '"/>' +
+        '<stop offset="100%" stop-color="' + C.petalDeep + '"/>' +
       "</radialGradient>" +
       '<linearGradient id="' + id + 'gLeaf" x1="0" y1="1" x2="0.25" y2="0">' +
-        '<stop offset="0%" stop-color="' + WC.leafDeep + '"/>' +
-        '<stop offset="46%" stop-color="' + WC.leafMid + '"/>' +
-        '<stop offset="100%" stop-color="' + WC.leafLight + '"/>' +
+        '<stop offset="0%" stop-color="' + C.leafDeep + '"/>' +
+        '<stop offset="46%" stop-color="' + C.leafMid + '"/>' +
+        '<stop offset="100%" stop-color="' + C.leafLight + '"/>' +
       "</linearGradient>" +
       '<radialGradient id="' + id + 'gLeafDeep">' +
-        '<stop offset="0%" stop-color="' + WC.leafDeep + '" stop-opacity="0.42"/>' +
-        '<stop offset="100%" stop-color="' + WC.leafDeep + '" stop-opacity="0"/>' +
+        '<stop offset="0%" stop-color="' + C.leafDeep + '" stop-opacity="0.42"/>' +
+        '<stop offset="100%" stop-color="' + C.leafDeep + '" stop-opacity="0"/>' +
       "</radialGradient>" +
       '<linearGradient id="' + id + 'gStem" x1="0" y1="1" x2="0" y2="0">' +
-        '<stop offset="0%" stop-color="' + WC.stemDeep + '"/>' +
-        '<stop offset="55%" stop-color="' + WC.stem + '"/>' +
-        '<stop offset="100%" stop-color="' + WC.leafMid + '"/>' +
+        '<stop offset="0%" stop-color="' + C.stemDeep + '"/>' +
+        '<stop offset="55%" stop-color="' + C.stem + '"/>' +
+        '<stop offset="100%" stop-color="' + C.leafMid + '"/>' +
       "</linearGradient>" +
       // 湿画法：湍流扰动，让色面边缘自然不规则
       '<radialGradient id="' + id + 'gDeep">' +
-        '<stop offset="0%" stop-color="' + WC.petalDeep + '" stop-opacity="0.55"/>' +
-        '<stop offset="100%" stop-color="' + WC.petalDeep + '" stop-opacity="0"/>' +
+        '<stop offset="0%" stop-color="' + C.petalDeep + '" stop-opacity="0.55"/>' +
+        '<stop offset="100%" stop-color="' + C.petalDeep + '" stop-opacity="0"/>' +
       "</radialGradient>" +
       '<radialGradient id="' + id + 'gLight">' +
-        '<stop offset="0%" stop-color="' + WC.petalLight + '" stop-opacity="0.8"/>' +
-        '<stop offset="100%" stop-color="' + WC.petalLight + '" stop-opacity="0"/>' +
+        '<stop offset="0%" stop-color="' + C.petalLight + '" stop-opacity="0.8"/>' +
+        '<stop offset="100%" stop-color="' + C.petalLight + '" stop-opacity="0"/>' +
       "</radialGradient>" +
       '<filter id="' + id + 'wet" x="-30%" y="-30%" width="160%" height="160%">' +
         '<feTurbulence type="fractalNoise" baseFrequency="0.045 0.05" numOctaves="2" seed="9" result="t"/>' +
@@ -155,36 +211,52 @@
     var cid = id + "pc" + (++petalSeq);
     return '<g transform="rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
       "<defs><clipPath id=\"" + cid + "\"><path d=\"" + d + "\"/></clipPath></defs>" +
-      '<path d="' + d + '" fill="' + WC.petalMid + '" opacity="0.80"/>' +
+      '<path d="' + d + '" fill="' + C.petalMid + '" opacity="0.80"/>' +
       '<g clip-path="url(#' + cid + ')">' +
         '<ellipse cx="0" cy="' + n(-len * 0.70) + '" rx="' + n(wid * 1.12) + '" ry="' + n(len * 0.44) +
         '" fill="url(#' + id + 'gDeep)"/>' +
         '<ellipse cx="' + n(wid * 0.10) + '" cy="' + n(-len * 0.30) + '" rx="' + n(wid * 0.74) + '" ry="' + n(len * 0.36) +
         '" fill="url(#' + id + 'gLight)"/>' +
       "</g>" +
-      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="3.4" opacity="0.14"/>' +
-      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="1.6" opacity="0.58"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + C.petalEdge + '" stroke-width="3.4" opacity="0.14"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + C.petalEdge + '" stroke-width="1.6" opacity="0.58"/>' +
       "</g>";
   }
 
   // 花心：淡黄晕 + 花粉点 + 青绿雌蕊（尺寸随花朵半径等比缩放）
   function stamen(r, id) {
     var dr = Math.max(0.55, r * 0.042);
-    var o = '<circle r="' + n(r * 0.30) + '" fill="' + WC.center + '" opacity="0.55" filter="url(#' + id + 'soft)"/>';
+    var o = '<circle r="' + n(r * 0.30) + '" fill="' + C.center + '" opacity="0.55" filter="url(#' + id + 'soft)"/>';
     var i, a, rad;
     for (i = 0; i < 15; i++) {
       a = i * 0.92 + 0.4;
       rad = r * (0.06 + 0.22 * Math.sqrt(i / 15));
       o += '<circle cx="' + n(Math.cos(a) * rad) + '" cy="' + n(Math.sin(a) * rad) + '" r="' +
-        n(dr * (1 + (i % 3) * 0.28)) + '" fill="' + WC.anther + '" opacity="0.88"/>';
+        n(dr * (1 + (i % 3) * 0.28)) + '" fill="' + C.anther + '" opacity="0.88"/>';
     }
     for (i = 0; i < 6; i++) {
       a = (i * 60 + 12) * Math.PI / 180;
       o += '<path d="M0 0 Q ' + n(Math.cos(a) * r * 0.08) + ' ' + n(Math.sin(a) * r * 0.08) +
         ' ' + n(Math.cos(a) * r * 0.17) + ' ' + n(Math.sin(a) * r * 0.17) + '" fill="none" stroke="' +
-        WC.pistil + '" stroke-width="' + n(Math.max(0.9, r * 0.035)) + '" stroke-linecap="round" opacity="0.7"/>';
+        C.pistil + '" stroke-width="' + n(Math.max(0.9, r * 0.035)) + '" stroke-linecap="round" opacity="0.7"/>';
     }
-    o += '<circle r="' + n(Math.max(1.1, r * 0.05)) + '" fill="' + WC.pistil + '" opacity="0.85"/>';
+    o += '<circle r="' + n(Math.max(1.1, r * 0.05)) + '" fill="' + C.pistil + '" opacity="0.85"/>';
+    return '<g filter="url(#' + id + 'blur)">' + o + "</g>";
+  }
+
+  // 向日葵式花盘：深色圆盘 + 黄金角排布的粉粒 + 一圈花粉边
+  function podCenter(r, id) {
+    var R = r * 0.54, o = "", i, a, rad;
+    o += '<circle r="' + n(R) + '" fill="' + C.center + '" opacity="0.97"/>';
+    o += '<circle r="' + n(R * 0.80) + '" fill="' + C.centerDeep + '" opacity="0.62"/>';
+    for (i = 0; i < 30; i++) {
+      a = i * 2.39996 + 0.7;                       // 黄金角，颗粒分布不结块
+      rad = R * 0.92 * Math.sqrt((i + 0.7) / 30);
+      o += '<circle cx="' + n(Math.cos(a) * rad) + '" cy="' + n(Math.sin(a) * rad) + '" r="' +
+        n(Math.max(0.8, R * 0.052)) + '" fill="' + C.anther + '" opacity="' + n(0.55 + (i % 3) * 0.12) + '"/>';
+    }
+    o += '<circle r="' + n(R * 0.99) + '" fill="none" stroke="' + C.petalEdge + '" stroke-width="' +
+      n(Math.max(1.2, R * 0.10)) + '" opacity="0.30"/>';
     return '<g filter="url(#' + id + 'blur)">' + o + "</g>";
   }
 
@@ -196,7 +268,7 @@
       wid = r * P.petalW * (1 + jitter * 0.06);
       o += petalShape(len, wid, rot + i * step + jitter * 5, id);
     }
-    o += stamen(r, id);
+    o += P.center === "pod" ? podCenter(r, id) : stamen(r, id);
     return o;
   }
 
@@ -224,7 +296,7 @@
       var lx = Math.cos(a * Math.PI / 180) * r * 0.94;
       var ly = Math.sin(a * Math.PI / 180) * r * 0.94;
       o += '<path d="M0 0 Q ' + n(lx * 0.55) + ' ' + n(ly * 0.55 - 8) + ' ' + n(lx) + ' ' + n(ly) +
-        '" fill="none" stroke="' + WC.stem + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>';
+        '" fill="none" stroke="' + C.stem + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>';
       for (i = 0; i < 4; i++) {
         tt = 0.34 + i * 0.22;
         o += '<g transform="translate(' + n(lx * tt + (rnd() - 0.5) * r * 0.34) + ' ' +
@@ -239,22 +311,31 @@
     var o = "", i, n1 = 4;
     var ax = r * 0.42, ay = r * 0.62;
     o += '<path d="M0 0 C ' + n(r * 0.10) + ' ' + n(-r * 0.24) + ' ' + n(r * 0.40) + ' ' + n(-r * 0.06) + ' ' + n(ax) + ' ' + n(ay) +
-      '" fill="none" stroke="' + WC.stem + '" stroke-width="2.4" stroke-linecap="round"/>';
+      '" fill="none" stroke="' + C.stem + '" stroke-width="2.4" stroke-linecap="round"/>';
     for (i = 0; i < n1; i++) {
       var t = i / (n1 - 1);
       var bx = ax * (0.55 + t * 0.95);
       var by = ay * (0.55 + t * 0.85) + Math.sin(t * 3.0) * r * 0.10;
-      var rr = r * 0.40 * (1 - t * 0.14);
+      var rr = r * 0.44 * (1 - t * 0.14);
+      // 钟形铃铛轮廓（口部外翻）
+      var bell = "M" + n(bx - rr * 0.52) + " " + n(by - rr * 0.60) +
+        " C " + n(bx - rr * 1.08) + " " + n(by + rr * 0.30) + " " + n(bx - rr * 1.00) + " " + n(by + rr * 1.02) + " " + n(bx - rr * 0.46) + " " + n(by + rr * 1.10) +
+        " L " + n(bx + rr * 0.46) + " " + n(by + rr * 1.10) +
+        " C " + n(bx + rr * 1.00) + " " + n(by + rr * 1.02) + " " + n(bx + rr * 1.08) + " " + n(by + rr * 0.30) + " " + n(bx + rr * 0.52) + " " + n(by - rr * 0.60) +
+        " Q " + n(bx) + " " + n(by - rr * 0.14) + " " + n(bx - rr * 0.52) + " " + n(by - rr * 0.60) + " Z";
       o += '<path d="M' + n(bx) + ' ' + n(by - rr * 1.5) + ' L' + n(bx) + ' ' + n(by - rr * 0.62) +
-        '" stroke="' + WC.stem + '" stroke-width="1.8" stroke-linecap="round"/>';
-      o += '<g filter="url(#' + id + 'wet)">' +
-        '<path d="M' + n(bx - rr * 0.52) + ' ' + n(by - rr * 0.60) +
-        ' C ' + n(bx - rr * 1.06) + ' ' + n(by + rr * 0.34) + ' ' + n(bx - rr * 0.92) + ' ' + n(by + rr * 1.02) + ' ' + n(bx) + ' ' + n(by + rr * 1.08) +
-        ' C ' + n(bx + rr * 0.92) + ' ' + n(by + rr * 1.02) + ' ' + n(bx + rr * 1.06) + ' ' + n(by + rr * 0.34) + ' ' + n(bx + rr * 0.52) + ' ' + n(by - rr * 0.60) +
-        ' Q ' + n(bx) + ' ' + n(by - rr * 0.14) + ' ' + n(bx - rr * 0.52) + ' ' + n(by - rr * 0.60) + ' Z"' +
-        ' fill="url(#' + id + 'gPetal)" opacity="0.8"/>' +
-        '<path d="M' + n(bx - rr * 0.90) + ' ' + n(by + rr * 0.80) + ' Q ' + n(bx) + ' ' + n(by + rr * 1.18) + ' ' + n(bx + rr * 0.90) + ' ' + n(by + rr * 0.80) + '"' +
-        ' fill="' + WC.petalDeep + '" opacity="0.5"/></g>';
+        '" stroke="' + C.stem + '" stroke-width="1.8" stroke-linecap="round"/>';
+      o += '<g>' +
+        // 铃铛本体：浅花底色 + 主题色描边（不进 wet 滤镜，保持铃形轮廓干净）
+        '<path d="' + bell + '" fill="' + C.petalLight + '" opacity="0.97"/>' +
+        '<path d="' + bell + '" fill="none" stroke="' + C.petalEdge + '" stroke-width="2.0" opacity="0.55"/>' +
+        // 口部阴影，做出钟形的体积
+        '<path d="M' + n(bx - rr * 0.92) + ' ' + n(by + rr * 0.86) + ' Q ' + n(bx) + ' ' + n(by + rr * 1.28) + ' ' + n(bx + rr * 0.92) + ' ' + n(by + rr * 0.86) +
+        ' L ' + n(bx + rr * 0.46) + ' ' + n(by + rr * 1.10) + ' L ' + n(bx - rr * 0.46) + ' ' + n(by + rr * 1.10) + ' Z"' +
+        ' fill="' + C.petalDeep + '" opacity="0.62"/>' +
+        // 铃口一点花蕊
+        '<circle cx="' + n(bx) + '" cy="' + n(by + rr * 0.80) + '" r="' + n(Math.max(1.2, rr * 0.13)) + '" fill="' + C.anther + '" opacity="0.85"/>' +
+        "</g>";
     }
     return o;
   }
@@ -272,14 +353,14 @@
       " C " + n(-wid * 0.36) + " " + n(-len * 0.96) + " " + n(wid * 0.36) + " " + n(-len * 0.96) + " " + n(wid * 0.60) + " " + n(-len * 0.78) +
       " C " + n(wid) + " " + n(-len * 0.46) + " " + n(wid * 0.52) + " " + n(-len * 0.12) + " 0 0 Z";
     return '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
-      '<path d="M0 ' + n(len * 0.34) + ' L0 ' + n(-len * 0.02) + '" stroke="' + WC.stem + '" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M0 ' + n(len * 0.34) + ' L0 ' + n(-len * 0.02) + '" stroke="' + C.stem + '" stroke-width="2" stroke-linecap="round"/>' +
       '<g filter="url(#' + id + 'wet)">' +
       '<path d="' + d + '" fill="url(#' + id + 'gBud)" opacity="0.85"/>' +
-      '<path d="' + d + '" fill="none" stroke="' + WC.petalEdge + '" stroke-width="1.6" opacity="0.28" filter="url(#' + id + 'blur)"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + C.petalEdge + '" stroke-width="1.6" opacity="0.28" filter="url(#' + id + 'blur)"/>' +
       '<path d="M' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' Q 0 ' + n(len * 0.22) + ' ' + n(wid * 0.46) + ' ' + n(-len * 0.02) +
-      ' Q 0 ' + n(-len * 0.30) + ' ' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' Z" fill="' + WC.leafMid + '" opacity="0.9"/>' +
+      ' Q 0 ' + n(-len * 0.30) + ' ' + n(-wid * 0.46) + ' ' + n(-len * 0.02) + ' Z" fill="' + C.leafMid + '" opacity="0.9"/>' +
       "</g>" +
-      '<path d="M0 ' + n(-len * 0.12) + ' L0 ' + n(-len * 0.80) + '" stroke="' + WC.petalDeep + '" stroke-width="1" opacity="0.25"/>' +
+      '<path d="M0 ' + n(-len * 0.12) + ' L0 ' + n(-len * 0.80) + '" stroke="' + C.petalDeep + '" stroke-width="1" opacity="0.25"/>' +
       "</g>";
   }
 
@@ -305,26 +386,26 @@
     var cid = id + "lc" + (++petalSeq);
     return '<g transform="translate(' + n(x) + ' ' + n(y) + ') rotate(' + n(ang) + ')" filter="url(#' + id + 'wet)">' +
       "<defs><clipPath id=\"" + cid + "\"><path d=\"" + d + "\"/></clipPath></defs>" +
-      '<path d="' + d + '" fill="' + WC.leafMid + '" opacity="0.9"/>' +
+      '<path d="' + d + '" fill="' + C.leafMid + '" opacity="0.9"/>' +
       '<g clip-path="url(#' + cid + ')">' +
         '<ellipse cx="' + n(wid * 0.18) + '" cy="' + n(-len * 0.30) + '" rx="' + n(wid * 0.95) + '" ry="' + n(len * 0.36) +
         '" fill="url(#' + id + 'gLeafDeep)"/>' +
         '<ellipse cx="' + n(-wid * 0.20) + '" cy="' + n(-len * 0.68) + '" rx="' + n(wid * 0.72) + '" ry="' + n(len * 0.32) +
         '" fill="url(#' + id + 'gLight)"/>' +
       "</g>" +
-      '<path d="' + d + '" fill="none" stroke="' + WC.leafDeep + '" stroke-width="1.2" opacity="0.45"/>' +
-      '<path d="M0 ' + n(-len * 0.06) + ' L0 ' + n(-len * 0.84) + '" stroke="' + WC.leafLight + '" stroke-width="2.2" opacity="0.6"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + C.leafDeep + '" stroke-width="1.2" opacity="0.45"/>' +
+      '<path d="M0 ' + n(-len * 0.06) + ' L0 ' + n(-len * 0.84) + '" stroke="' + C.leafLight + '" stroke-width="2.2" opacity="0.6"/>' +
       '<path d="M0 ' + n(-len * 0.40) + ' Q ' + n(-wid * 0.34) + ' ' + n(-len * 0.52) + ' ' + n(-wid * 0.46) + ' ' + n(-len * 0.62) +
-      '" fill="none" stroke="' + WC.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
+      '" fill="none" stroke="' + C.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
       '<path d="M0 ' + n(-len * 0.56) + ' Q ' + n(wid * 0.34) + ' ' + n(-len * 0.68) + ' ' + n(wid * 0.44) + ' ' + n(-len * 0.76) +
-      '" fill="none" stroke="' + WC.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
+      '" fill="none" stroke="' + C.leafLight + '" stroke-width="1.4" opacity="0.42"/>' +
       "</g>";
   }
 
   function stem(d, w, id) {
     return '<path d="' + d + '" fill="none" stroke="url(#' + id + 'gStem)" stroke-width="' + w +
       '" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>' +
-      '<path d="' + d + '" fill="none" stroke="' + WC.stemDeep + '" stroke-width="' + (w + 3) +
+      '<path d="' + d + '" fill="none" stroke="' + C.stemDeep + '" stroke-width="' + (w + 3) +
       '" stroke-linecap="round" opacity="0.14" filter="url(#' + id + 'blur)"/>';
   }
 
@@ -343,11 +424,11 @@
       var b = blobs[i];
       o += '<path d="' + blobPath(b[0] + (rnd() - 0.5) * 12, b[1] + (rnd() - 0.5) * 12,
         b[2] * (0.9 + rnd() * 0.2), b[3] * (0.9 + rnd() * 0.2), b[4] + rnd()) +
-        '" fill="' + WC.wash + '" opacity="0.52" filter="url(#' + id + 'wash)"/>';
+        '" fill="' + C.wash + '" opacity="0.52" filter="url(#' + id + 'wash)"/>';
     }
     for (i = 0; i < 10; i++) {
       o += '<circle cx="' + n(130 + rnd() * 260) + '" cy="' + n(190 + rnd() * 380) + '" r="' +
-        n(1.2 + rnd() * 2.4) + '" fill="' + WC.leafMid + '" opacity="' + n(0.16 + rnd() * 0.22) + '" filter="url(#' + id + 'blur)"/>';
+        n(1.2 + rnd() * 2.4) + '" fill="' + C.leafMid + '" opacity="' + n(0.16 + rnd() * 0.22) + '" filter="url(#' + id + 'blur)"/>';
     }
     return o;
   }
@@ -357,8 +438,10 @@
   var TYPE = {
     rose:      { kind: "simple", petals: 7, petalW: 0.50, wobble: 1.3 },
     tulip:     { kind: "simple", petals: 5, petalW: 0.46, wobble: 0.8 },
-    daisy:     { kind: "simple", petals: 8, petalW: 0.30, wobble: 1.4 },
-    sunflower: { kind: "simple", petals: 10, petalW: 0.26, wobble: 1.4 },
+    daisy:     { kind: "simple", petals: 12, petalW: 0.205, wobble: 1.3 },
+    // 向日葵：细密多瓣 + 深色花盘（中心填色由花型覆盖）
+    sunflower: { kind: "simple", petals: 14, petalW: 0.235, wobble: 1.1,
+                 center: "pod", centerFill: "#8A5C33", centerDeep: "#5C3A1E" },
     hydrangea: { kind: "dome",   petals: 4, petalW: 0.52, wobble: 0.8 },
     bell:      { kind: "bell",   petals: 5, petalW: 0.44, wobble: 0.4 },
     starry:    { kind: "spray",  petals: 5, petalW: 0.44, wobble: 1.0 },
@@ -411,6 +494,10 @@
   function build(bouquet, rnd) {
     rnd = rnd || Math.random;
     var P = TYPE[bouquet && bouquet.type] || TYPE.rose;
+    // 按这一束的 colors 派生整套色板 —— 每日花束的「颜色主题」就从这里变
+    C = paletteFor(bouquet);
+    if (P.centerFill) C.center = P.centerFill;
+    if (P.centerDeep) C.centerDeep = P.centerDeep;
     var id = "wc" + (++uidSeq) + "_";
     var i;
     var take = P.kind === "bell" || P.kind === "dome" ? 3 : 4;
@@ -461,5 +548,5 @@
     );
   }
 
-  window.FLOWERS = { build: build, WC: WC, TYPE: TYPE };
+  window.FLOWERS = { build: build, paletteFor: paletteFor, WC: WC, TYPE: TYPE };
 })();

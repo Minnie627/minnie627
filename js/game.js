@@ -13,6 +13,7 @@
   const state = {
     dateKey: UTIL.todayKey(),
     bouquet: null,
+    palette: null,
     quote: null,
     collected: false,
     history: [],
@@ -39,6 +40,8 @@
     dateLabel: $("#dateLabel"),
     btnCollect: $("#btnCollect"),
     btnCollectText: $("#btnCollectText"),
+    btnReplay: $("#btnReplay"),
+    btnReset: $("#btnReset"),
     btnHistory: $("#btnHistory"),
     btnShare: $("#btnShare"),
     historySheet: $("#historySheet"),
@@ -323,6 +326,8 @@
     const idx = UTIL.bouquetIndexFor(state.dateKey);
     state.bouquet = CFG.bouquets[idx];
     state.quote = CFG.quotes[UTIL.quoteIndexFor(state.dateKey)];
+    // 颜色主题：由当天这束花的 colors 派生，换花即换色
+    state.palette = window.FLOWERS.paletteFor(state.bouquet);
 
     loadHistory();
     renderScene();
@@ -424,13 +429,33 @@
     }, CFG.anim.handwrite + CFG.anim.handwriteOut + 720);
   }
 
+  // 十六进制色 + 透明度 → rgba()（让 mood 标签跟着当天主题色走）
+  function hexA(hex, a) {
+    const h = String(hex || "").replace("#", "");
+    const full = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h;
+    const v = parseInt(full, 16);
+    if (isNaN(v)) return "rgba(78, 99, 71, " + a + ")";
+    return "rgba(" + ((v >> 16) & 255) + ", " + ((v >> 8) & 255) + ", " + (v & 255) + ", " + a + ")";
+  }
+
   // ---------- 场景文本 ----------
   function renderScene() {
     els.flowerName.textContent = state.bouquet.name;
     els.moodTag.textContent = state.bouquet.mood;
     els.quote.textContent = "“" + state.quote + "”";
     els.dateLabel.textContent = state.dateKey.replace(/-/g, "  ·  ");
+    applyTheme();
     if (state.collected) setCollectedUI();
+  }
+
+  // 把当天主题色铺到 UI 上：心情标签、日期下的小色点
+  function applyTheme() {
+    const pal = state.palette || window.FLOWERS.paletteFor(state.bouquet);
+    if (!pal) return;
+    els.moodTag.style.color = pal.petalEdge;
+    els.moodTag.style.borderColor = hexA(pal.petalEdge, 0.42);
+    els.moodTag.style.background = hexA(pal.petalEdge, 0.07);
+    document.documentElement.style.setProperty("--theme", pal.petalEdge);
   }
 
   // ============================================================
@@ -442,8 +467,9 @@
     els.bouquetBox.innerHTML = window.FLOWERS.build(b, rnd);
     const svg = els.bouquetBox.firstElementChild;
     if (svg) svg.classList.add("bloom");
-    // 水彩粉色飘落花瓣
-    spawnPetals(["#F7CEDB", "#F2B4C6", "#FBE3EA"]);
+    // 落花粒子也跟着当天色板走
+    const pal = state.palette || window.FLOWERS.paletteFor(b);
+    spawnPetals([pal.petalLight, pal.petalMid, pal.petalDeep]);
   }
   // 落花粒子
   function spawnPetals(colors) {
@@ -494,6 +520,64 @@
   function setCollectedUI() {
     els.btnCollect.classList.add("done");
     els.btnCollectText.textContent = "今日已收花";
+  }
+
+  // ============================================================
+  // 体验入口：再走一遍「领取」的完整反馈（不重复记账）
+  // ============================================================
+  function replayCollect() {
+    if (!state.collected) {
+      collectFlower();                 // 还没领过 → 直接走真实领取
+      return;
+    }
+    const pal = state.palette || window.FLOWERS.paletteFor(state.bouquet);
+    spawnPetals([pal.petalLight, pal.petalMid, pal.petalDeep]);
+    playChime();
+    showLoveModal();
+    showToast("再收一次花，也一样心动 🌸");
+  }
+
+  // ============================================================
+  // 全部恢复默认设置
+  // ============================================================
+  let resetArmedAt = 0;
+  let resetTimer = null;
+
+  function disarmReset() {
+    resetArmedAt = 0;
+    clearTimeout(resetTimer);
+    if (els.btnReset) {
+      els.btnReset.classList.remove("armed");
+      els.btnReset.textContent = "全部恢复默认设置";
+    }
+  }
+
+  function handleResetClick() {
+    const now = Date.now();
+    if (now - resetArmedAt > 3200) {   // 第一次点：进入待确认，不删任何东西
+      resetArmedAt = now;
+      els.btnReset.classList.add("armed");
+      els.btnReset.textContent = "再点一次，确认全部重置";
+      showToast("再次点击将清空领取记录");
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(disarmReset, 3400);
+      return;
+    }
+    resetAll();
+  }
+
+  function resetAll() {
+    disarmReset();
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    state.history = [];
+    state.collected = false;
+    els.btnCollect.classList.remove("done");
+    els.btnCollectText.textContent = "领取今日鲜花";
+    renderScene();
+    renderHistory();
+    hideLoveModal();
+    showToast("已恢复默认设置 ✨");
+    return "已恢复默认设置";
   }
 
   // 「亲爱的，我爱你」弹跳小窗
@@ -599,6 +683,18 @@
       e.preventDefault();
       shareFlower();
     });
+    if (els.btnReplay) {
+      els.btnReplay.addEventListener("click", function (e) {
+        e.preventDefault();
+        replayCollect();
+      });
+    }
+    if (els.btnReset) {
+      els.btnReset.addEventListener("click", function (e) {
+        e.preventDefault();
+        handleResetClick();
+      });
+    }
     els.historyClose.addEventListener("click", function (e) {
       e.preventDefault();
       closeHistory();
@@ -652,6 +748,7 @@
         flower: state.bouquet.name,
         mood: state.bouquet.mood,
         quote: state.quote,
+        colors: state.bouquet.colors,
         collected: state.collected,
       };
     },
@@ -660,6 +757,17 @@
     },
     getStats: function () { return computeStats(); },
     lookup: function (dateKey) { return UTIL.lookup(dateKey); },
+    // 换一天看看：返回那天的花与文案（不改变当前页面状态）
+    preview: function (dateKey) {
+      const i = UTIL.bouquetIndexFor(dateKey);
+      return {
+        date: dateKey,
+        bouquet: CFG.bouquets[i],
+        quote: CFG.quotes[UTIL.quoteIndexFor(dateKey)],
+      };
+    },
+    replay: function () { replayCollect(); return "已重播领取流程"; },
+    reset: function () { return resetAll(); },
     exportJSON: function () {
       return JSON.stringify({
         storageKey: STORAGE_KEY,
@@ -668,14 +776,7 @@
         records: this.getHistory(),
       }, null, 2);
     },
-    clear: function () {
-      state.history = [];
-      state.collected = false;
-      saveHistory();
-      els.btnCollect.classList.remove("done");
-      els.btnCollectText.textContent = "领取今日花束";
-      return "已清空本地领取记录";
-    },
+    clear: function () { return resetAll(); },
   };
 
   // ---------- 小程序 API mock ----------
