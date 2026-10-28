@@ -17,54 +17,78 @@
       <span class="bokeh b2"></span>
       <span class="bokeh b3"></span>
 
-      <svg id="greetKiss" viewBox="0 0 120 88" xmlns="http://www.w3.org/2000/svg">
+      <svg id="greetKiss" viewBox="0 -14 250 229" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="kissG" x1="0" y1="0" x2="0.2" y2="1">
-            <stop offset="0%" stop-color="#FBAEC3"/>
-            <stop offset="55%" stop-color="#EE7C9E"/>
-            <stop offset="100%" stop-color="#D9557B"/>
+          <linearGradient id="lipG" x1="0.15" y1="0" x2="0.45" y2="1">
+            <stop offset="0%" stop-color="#F55A6B"/>
+            <stop offset="38%" stop-color="#E51F2C"/>
+            <stop offset="100%" stop-color="#C11020"/>
           </linearGradient>
-          <filter id="kissSoft" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.15"/>
-          </filter>
+          <linearGradient id="heartG2" x1="0" y1="0" x2="0.3" y2="1">
+            <stop offset="0%" stop-color="#FBB3BF"/>
+            <stop offset="100%" stop-color="#E97D90"/>
+          </linearGradient>
         </defs>
-        <g filter="url(#kissSoft)" fill="url(#kissG)">
-          <path d="M6 36C6 36 22 10 38 16c6 2 10 7 22 7s16-5 22-7c16-6 32 20 32 20s-24 8-54 8S6 36 6 36Z" opacity="0.94"/>
-          <path d="M12 48c18-4 32-5 48-5s30 1 48 5c-4 20-24 34-48 34S16 68 12 48Z" opacity="0.88"/>
+
+        <!-- 三颗爱心：错落排在右上 -->
+        <g stroke="#4C0F1B" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round">
+          <g transform="translate(142 -8) scale(0.92) rotate(-14)">
+            <path d="M12 21C12 21 1 13.4 1 6.8 1 3 4 1 6.8 1 9 1 11 2.4 12 4.3 13 2.4 15 1 17.2 1 20 1 23 3 23 6.8 23 13.4 12 21 12 21Z" fill="url(#heartG2)"/>
+            <ellipse cx="7.6" cy="7.6" rx="3.2" ry="2" fill="#FFF7F8" opacity="0.6" transform="rotate(-24 7.6 7.6)"/>
+          </g>
+          <g transform="translate(178 -2) scale(1.06) rotate(3)">
+            <path d="M12 21C12 21 1 13.4 1 6.8 1 3 4 1 6.8 1 9 1 11 2.4 12 4.3 13 2.4 15 1 17.2 1 20 1 23 3 23 6.8 23 13.4 12 21 12 21Z" fill="url(#heartG2)"/>
+            <ellipse cx="7.6" cy="7.6" rx="3.2" ry="2" fill="#FFF7F8" opacity="0.6" transform="rotate(-24 7.6 7.6)"/>
+          </g>
+          <g transform="translate(210 12) scale(1.26) rotate(15)">
+            <path d="M12 21C12 21 1 13.4 1 6.8 1 3 4 1 6.8 1 9 1 11 2.4 12 4.3 13 2.4 15 1 17.2 1 20 1 23 3 23 6.8 23 13.4 12 21 12 21Z" fill="url(#heartG2)"/>
+            <ellipse cx="7.6" cy="7.6" rx="3.2" ry="2" fill="#FFF7F8" opacity="0.6" transform="rotate(-24 7.6 7.6)"/>
+          </g>
         </g>
-        <g fill="#FFF3F6" opacity="0.16">
-          <ellipse cx="38" cy="26" rx="9" ry="3.2" transform="rotate(-16 38 26)"/>
-          <ellipse cx="80" cy="27" rx="8" ry="2.8" transform="rotate(14 80 27)"/>
+
+        <!-- 嘴唇：上下两瓣合成一个轮廓，左右嘴角收尖 -->
+        <g stroke="#4C0F1B" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M14 140C22 108 44 76 78 66 96 60 110 76 118 96 126 70 142 52 168 56 194 60 216 88 226 120 210 172 168 198 116 198 64 198 26 172 14 140Z" fill="url(#lipG)"/>
+          <path d="M22 150C62 182 168 178 220 130 206 176 162 196 116 196 70 196 34 178 22 150Z" fill="#A30F1D" stroke="none" opacity="0.45"/>
+          <path d="M15 138C20 116 32 94 50 80 34 100 26 120 26 140 26 158 36 176 52 188 32 176 20 158 15 138Z" fill="#8C0B15" stroke="none" opacity="0.30"/>
+          <path d="M30 140C70 162 140 160 182 136 200 126 216 122 224 122" fill="none" stroke-width="7.5"/>
+        </g>
+
+        <!-- 高光 -->
+        <g fill="#FFF9F7">
+          <ellipse cx="166" cy="86" rx="15.5" ry="10.5" transform="rotate(-30 166 86)"/>
+          <ellipse cx="116" cy="176" rx="10" ry="5.6" transform="rotate(-12 116 176)"/>
+          <ellipse cx="150" cy="179" rx="12.5" ry="6.5" transform="rotate(-8 150 179)"/>
         </g>
       </svg>
 
-      <i class="sp lg" style="left:12%;top:22%;width:22px;height:22px;--d:2.6s;--delay:0.10s"></i>
-      <i class="sp " style="left:24%;top:13%;width:14px;height:14px;--d:2.9s;--delay:0.70s"></i>
-      <i class="sp " style="left:38%;top:9%;width:16px;height:16px;--d:3.2s;--delay:0.35s"></i>
-      <i class="sp " style="right:48%;top:17%;width:12px;height:12px;--d:3.6s;--delay:1.25s"></i>
-      <i class="sp " style="right:34%;top:11%;width:15px;height:15px;--d:3.9s;--delay:0.55s"></i>
-      <i class="sp lg" style="right:20%;top:19%;width:19px;height:19px;--d:4.2s;--delay:1.60s"></i>
-      <i class="sp " style="right:10%;top:32%;width:13px;height:13px;--d:4.5s;--delay:2.10s"></i>
-      <i class="sp " style="left:8%;top:38%;width:16px;height:16px;--d:2.6s;--delay:1.05s"></i>
-      <i class="sp " style="left:19%;top:45%;width:11px;height:11px;--d:2.9s;--delay:2.50s"></i>
-      <i class="sp " style="right:14%;top:44%;width:14px;height:14px;--d:3.2s;--delay:0.20s"></i>
-      <i class="sp lg" style="right:7%;top:55%;width:17px;height:17px;--d:3.6s;--delay:1.40s"></i>
-      <i class="sp " style="left:14%;top:64%;width:13px;height:13px;--d:3.9s;--delay:1.85s"></i>
-      <i class="sp lg" style="left:26%;top:71%;width:18px;height:18px;--d:4.2s;--delay:0.95s"></i>
-      <i class="sp " style="left:41%;top:67%;width:12px;height:12px;--d:4.5s;--delay:2.20s"></i>
-      <i class="sp " style="right:45%;top:73%;width:15px;height:15px;--d:2.6s;--delay:0.45s"></i>
-      <i class="sp " style="right:31%;top:65%;width:11px;height:11px;--d:2.9s;--delay:1.70s"></i>
-      <i class="sp " style="right:19%;top:71%;width:16px;height:16px;--d:3.2s;--delay:2.65s"></i>
-      <i class="sp " style="right:9%;top:63%;width:12px;height:12px;--d:3.6s;--delay:1.15s"></i>
-      <i class="sp " style="left:22%;top:82%;width:14px;height:14px;--d:3.9s;--delay:0.60s"></i>
-      <i class="sp " style="left:48%;top:86%;width:12px;height:12px;--d:4.2s;--delay:1.95s"></i>
-      <i class="sp " style="right:28%;top:84%;width:15px;height:15px;--d:4.5s;--delay:2.40s"></i>
-      <i class="dot" style="left:18%;top:33%;width:6px;height:6px;--d:4.6s;--delay:0.20s"></i>
-      <i class="dot" style="left:34%;top:57%;width:5px;height:5px;--d:4.9s;--delay:1.40s"></i>
-      <i class="dot" style="right:38%;top:60%;width:6px;height:6px;--d:5.3s;--delay:2.60s"></i>
-      <i class="dot" style="right:12%;top:36%;width:5px;height:5px;--d:5.6s;--delay:3.20s"></i>
-      <i class="dot" style="left:46%;top:78%;width:5px;height:5px;--d:6.0s;--delay:0.90s"></i>
-      <i class="dot" style="right:24%;top:52%;width:6px;height:6px;--d:4.6s;--delay:2.00s"></i>
+      <i class="sp lg" style="left:12%;top:22%;width:29px;height:29px;--d:2.6s;--delay:0.10s"></i>
+      <i class="sp " style="left:24%;top:13%;width:18px;height:18px;--d:2.9s;--delay:0.70s"></i>
+      <i class="sp " style="left:38%;top:9%;width:21px;height:21px;--d:3.2s;--delay:0.35s"></i>
+      <i class="sp " style="right:48%;top:17%;width:16px;height:16px;--d:3.6s;--delay:1.25s"></i>
+      <i class="sp " style="right:34%;top:11%;width:20px;height:20px;--d:3.9s;--delay:0.55s"></i>
+      <i class="sp lg" style="right:20%;top:19%;width:25px;height:25px;--d:4.2s;--delay:1.60s"></i>
+      <i class="sp " style="right:10%;top:32%;width:17px;height:17px;--d:4.5s;--delay:2.10s"></i>
+      <i class="sp " style="left:8%;top:38%;width:21px;height:21px;--d:2.6s;--delay:1.05s"></i>
+      <i class="sp " style="left:19%;top:45%;width:14px;height:14px;--d:2.9s;--delay:2.50s"></i>
+      <i class="sp " style="right:14%;top:44%;width:18px;height:18px;--d:3.2s;--delay:0.20s"></i>
+      <i class="sp lg" style="right:7%;top:55%;width:22px;height:22px;--d:3.6s;--delay:1.40s"></i>
+      <i class="sp " style="left:14%;top:64%;width:17px;height:17px;--d:3.9s;--delay:1.85s"></i>
+      <i class="sp lg" style="left:26%;top:71%;width:23px;height:23px;--d:4.2s;--delay:0.95s"></i>
+      <i class="sp " style="left:41%;top:67%;width:16px;height:16px;--d:4.5s;--delay:2.20s"></i>
+      <i class="sp " style="right:45%;top:73%;width:20px;height:20px;--d:2.6s;--delay:0.45s"></i>
+      <i class="sp " style="right:31%;top:65%;width:14px;height:14px;--d:2.9s;--delay:1.70s"></i>
+      <i class="sp " style="right:19%;top:71%;width:21px;height:21px;--d:3.2s;--delay:2.65s"></i>
+      <i class="sp " style="right:9%;top:63%;width:16px;height:16px;--d:3.6s;--delay:1.15s"></i>
+      <i class="sp " style="left:22%;top:82%;width:18px;height:18px;--d:3.9s;--delay:0.60s"></i>
+      <i class="sp " style="left:48%;top:86%;width:16px;height:16px;--d:4.2s;--delay:1.95s"></i>
+      <i class="sp " style="right:28%;top:84%;width:20px;height:20px;--d:4.5s;--delay:2.40s"></i>
+      <i class="dot" style="left:18%;top:33%;width:8px;height:8px;--d:4.6s;--delay:0.20s"></i>
+      <i class="dot" style="left:34%;top:57%;width:6px;height:6px;--d:4.9s;--delay:1.40s"></i>
+      <i class="dot" style="right:38%;top:60%;width:8px;height:8px;--d:5.3s;--delay:2.60s"></i>
+      <i class="dot" style="right:12%;top:36%;width:6px;height:6px;--d:5.6s;--delay:3.20s"></i>
+      <i class="dot" style="left:46%;top:78%;width:6px;height:6px;--d:6.0s;--delay:0.90s"></i>
+      <i class="dot" style="right:24%;top:52%;width:8px;height:8px;--d:4.6s;--delay:2.00s"></i>
     </div>
 
     <div id="greetingText"></div>

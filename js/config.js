@@ -73,6 +73,15 @@ window.GAME_CONFIG = {
     "这束花会谢，但我不会。",
   ],
 
+  // 手动指定某一天的花束与文案（不改则按日期轮换）
+  // 例：{ "2026-10-28": { flower: "玫瑰", quote: "……" } }
+  pinned: {
+    "2026-10-28": {
+      flower: "玫瑰",
+      quote: "这束玫瑰，替我说出那句一直没说出口的「我爱你」。",
+    },
+  },
+
   // 领取后的俏皮小弹窗
   loveMessage: "亲爱的，我爱你",
 
@@ -122,9 +131,21 @@ window.GAME_UTIL = {
     return this.fmtDate(new Date());
   },
   bouquetIndexFor: function (dateKey) {
+    const pin = (window.GAME_CONFIG.pinned || {})[dateKey];
+    if (pin && pin.flower) {
+      const i = window.GAME_CONFIG.bouquets.findIndex(function (b) { return b.name === pin.flower; });
+      if (i >= 0) return i;
+    }
     return this.hashCode(dateKey) % window.GAME_CONFIG.bouquets.length;
   },
   quoteIndexFor: function (dateKey) {
+    const pin = (window.GAME_CONFIG.pinned || {})[dateKey];
+    if (pin && pin.quote) {
+      const i = window.GAME_CONFIG.quotes.indexOf(pin.quote);
+      if (i >= 0) return i;
+      window.GAME_CONFIG.quotes.push(pin.quote);   // 自定义文案临时入表
+      return window.GAME_CONFIG.quotes.length - 1;
+    }
     return this.hashCode("q" + dateKey) % window.GAME_CONFIG.quotes.length;
   },
   // 查询某一天的花束与文案（供数据查询用）

@@ -355,7 +355,7 @@
   // ---------------- 花型 ----------------
 
   var TYPE = {
-    rose:      { kind: "simple", petals: 5, petalW: 0.52, wobble: 1.0 },
+    rose:      { kind: "simple", petals: 7, petalW: 0.50, wobble: 1.3 },
     tulip:     { kind: "simple", petals: 5, petalW: 0.46, wobble: 0.8 },
     daisy:     { kind: "simple", petals: 8, petalW: 0.30, wobble: 1.4 },
     sunflower: { kind: "simple", petals: 10, petalW: 0.26, wobble: 1.4 },
