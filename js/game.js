@@ -116,12 +116,68 @@
     return true;
   }
 
-  // 「啵啵」两声，音高略不同，更像嘴巴发出的声音
+  // 「啵啵」两声，音高略不同，更像嘴巴发出的声音（语音不可用时的兜底）
   function playBoopTwice() {
     const ok1 = playBoop(0, 900);
     const ok2 = playBoop(0.19, 760);
     if (ok1 || ok2) state.boopPlayed = true;
     return ok1 || ok2;
+  }
+
+  // ---------- 稚幼童声朗读「bō」「bó」 ----------
+  let cachedVoice = null;
+
+  function pickZhVoice() {
+    if (!window.speechSynthesis) return null;
+    let list = [];
+    try { list = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+    if (!list.length) return null;
+    const zh = list.filter(function (v) { return /^zh/i.test(v.lang || ""); });
+    if (!zh.length) return null;
+    // 优先挑选偏童声 / 女声的音色，听起来更稚嫩
+    const prefer = /child|kid|girl|junior|xiaoyi|xiaoxiao|xiaohan|ting|huihui|yaoyao|female|女|童/i;
+    return zh.find(function (v) { return prefer.test(v.name || ""); }) || zh[0];
+  }
+
+  // 预热音色列表（部分浏览器异步加载）
+  if (window.speechSynthesis) {
+    cachedVoice = pickZhVoice();
+    try {
+      speechSynthesis.onvoiceschanged = function () { cachedVoice = pickZhVoice(); };
+    } catch (e) {}
+  }
+
+  // 第一声 bō（阴平：高而平），第二声 bó（阳平：更扬、尾音略长）
+  function speakBo() {
+    if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance === "undefined") return false;
+    try {
+      speechSynthesis.cancel();
+      const v = cachedVoice || pickZhVoice();
+      const mk = function (pitch, rate) {
+        const u = new SpeechSynthesisUtterance("啵");
+        u.lang = "zh-CN";
+        u.pitch = pitch;   // 高音高 → 童声感
+        u.rate = rate;
+        u.volume = 1;
+        if (v) u.voice = v;
+        return u;
+      };
+      speechSynthesis.speak(mk(1.9, 0.92));   // bō
+      setTimeout(function () {
+        try { speechSynthesis.speak(mk(2.0, 0.62)); } catch (e) {}  // bó：更慢更长，听感上扬
+      }, 440);
+      state.boopPlayed = true;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 统一入口：优先童声，不可用则退回合成「啵」音
+  function sayBo() {
+    const ok = speakBo();
+    if (!ok) playBoopTwice();
+    return ok;
   }
 
   // 领取时的小音符（上行三音）
@@ -154,7 +210,7 @@
       state.audioReady = true;
       if (!state.boopPlayed) {
         // 延迟一点点，等 resume 生效
-        setTimeout(function () { playBoopTwice(); }, 60);
+        setTimeout(function () { sayBo(); }, 60);
       }
       if (els.greetHint) els.greetHint.classList.add("hide");
       document.removeEventListener("pointerdown", unlock);
@@ -216,7 +272,7 @@
     els.greetingText.classList.add("pop");
 
     // 尝试自动播放「啵啵」（桌面端通常成功，移动端会被拦截 → 由手势解锁补播）
-    setTimeout(function () { playBoopTwice(); }, 260);
+    setTimeout(function () { sayBo(); }, 320);
 
     setTimeout(function () {
       els.greeting.classList.add("fade-out");
@@ -236,21 +292,19 @@
     // 1) 手写字
     els.handwrite.innerHTML = buildHandwriteSVG();
     els.handwrite.classList.remove("hw-out");
-    els.handwrite.style.display = "block";
+    els.handwrite.style.display = "flex";
     els.bouquetBox.classList.remove("show");
     els.flowerInfo.classList.remove("show");
     els.quoteCard.classList.remove("show");
 
-    // 逐笔描边动画（用真实路径长度，避免起点突现）
-    const paths = els.handwrite.querySelectorAll(".hw-path");
-    paths.forEach(function (p, i) {
-      let len = 300;
-      try { len = p.getTotalLength(); } catch (e) {}
-      p.style.strokeDasharray = len + " " + len;
-      p.style.strokeDashoffset = len;
-      p.style.animation = "hw-draw 0.85s cubic-bezier(0.45, 0, 0.35, 1) forwards";
-      p.style.animationDelay = (i * 0.18) + "s";
-    });
+    // 用墨迹晕染的方式显现（笔画始终完整，不做部分描边）
+    const word = els.handwrite.querySelector(".hw-word");
+    if (word) {
+      word.classList.remove("hw-in");
+      // 强制回流，确保动画每次都重新播放
+      void word.getBoundingClientRect();
+      word.classList.add("hw-in");
+    }
 
     // 2) 手写淡出
     setTimeout(function () {
@@ -274,18 +328,13 @@
     }, CFG.anim.handwrite + CFG.anim.handwriteOut + 720);
   }
 
-  // 手写「dc」SVG（两笔字母 + 一颗小爱心收尾）
+  // 手写「dc」：取自参考图的优雅斜体书写风；笔画完整连贯、整体居中，无任何装饰元素
   function buildHandwriteSVG() {
     return (
-      '<svg viewBox="0 0 240 140" class="handwrite-svg" xmlns="http://www.w3.org/2000/svg">' +
-        // d：竖笔
-        '<path class="hw-path" d="M100 18 L100 98" />' +
-        // d：圆碗
-        '<path class="hw-path" d="M100 52 A26 26 0 1 0 101 97" />' +
-        // c
-        '<path class="hw-path" d="M196 46 C172 40 154 58 154 78 C154 98 174 108 196 99" />' +
-        // 小爱心
-        '<path class="hw-path hw-heart" d="M205 30 C205 25 199 23 196 27 C193 23 187 25 187 30 C187 35 196 41 196 41 C196 41 205 35 205 30 Z" />' +
+      '<svg viewBox="0 0 320 200" class="handwrite-svg" xmlns="http://www.w3.org/2000/svg">' +
+        '<text class="hw-word" x="160" y="142" text-anchor="middle" ' +
+          'font-family="Cormorant Garamond, Playfair Display, Georgia, Times New Roman, serif" ' +
+          'font-style="italic" font-weight="400" font-size="148" letter-spacing="3">dc</text>' +
       "</svg>"
     );
   }
@@ -295,315 +344,22 @@
     els.flowerName.textContent = state.bouquet.name;
     els.moodTag.textContent = state.bouquet.mood;
     els.quote.textContent = "“" + state.quote + "”";
-    els.dateLabel.textContent = "今日花语 · " + state.dateKey;
+    els.dateLabel.textContent = state.dateKey.replace(/-/g, "  ·  ");
     if (state.collected) setCollectedUI();
   }
 
   // ============================================================
-  // 线条风花束绘制
+  // 花束渲染（复古植物学墨线风格，绘制逻辑在 flowers.js）
   // ============================================================
-  const f = function (n) { return Math.round(n * 10) / 10; };
-
-  // 统一放大 SVG 里的 stroke-width，让线稿更清晰
-  function bumpStroke(svg, k) {
-    return svg.replace(/stroke-width="([\d.]+)"/g, function (m, v) {
-      return 'stroke-width="' + (parseFloat(v) * k).toFixed(2) + '"';
-    });
-  }
-
-  function ellipse(cx, cy, rx, ry, rot, line, fill, w) {
-    return '<ellipse cx="' + f(cx) + '" cy="' + f(cy) + '" rx="' + f(rx) + '" ry="' + f(ry) +
-      '" transform="rotate(' + f(rot) + ' ' + f(cx) + ' ' + f(cy) + ')" fill="' + fill +
-      '" stroke="' + line + '" stroke-width="' + (w || 2) + '" stroke-linejoin="round"/>';
-  }
-
-  function dot(cx, cy, r, color) {
-    return '<circle cx="' + f(cx) + '" cy="' + f(cy) + '" r="' + f(r) + '" fill="' + color + '"/>';
-  }
-
-  // 各花型绘制器：统一签名 (x, y, s, line, fill, accent, green)
-  const FLOWER_RENDERERS = {
-    // 玫瑰：外圈花瓣 + 内旋涡
-    rose: function (x, y, s, line, fill) {
-      let o = "";
-      for (let i = 0; i < 5; i++) {
-        const a = i * 72;
-        const rad = (a * Math.PI) / 180;
-        const px = x + Math.cos(rad) * 12 * s;
-        const py = y + Math.sin(rad) * 12 * s;
-        o += ellipse(px, py, 13 * s, 9.5 * s, a + 90, line, fill, 2);
-      }
-      o += '<path d="M ' + f(x - 8 * s) + ' ' + f(y + 1 * s) +
-        ' a ' + f(8 * s) + ' ' + f(8 * s) + ' 0 1 1 ' + f(13 * s) + ' ' + f(-3 * s) +
-        ' a ' + f(6 * s) + ' ' + f(6 * s) + ' 0 1 1 ' + f(-9 * s) + ' ' + f(4 * s) +
-        ' a ' + f(3.6 * s) + ' ' + f(3.6 * s) + ' 0 1 1 ' + f(6 * s) + ' ' + f(2 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="' + f(1.8 * s) + '" stroke-linecap="round"/>';
-      return o;
-    },
-
-    // 小雏菊：多细花瓣 + 圆花心
-    daisy: function (x, y, s, line, fill, accent) {
-      let o = "";
-      for (let i = 0; i < 12; i++) {
-        const a = i * 30;
-        const rad = (a * Math.PI) / 180;
-        const px = x + Math.cos(rad) * 13 * s;
-        const py = y + Math.sin(rad) * 13 * s;
-        o += ellipse(px, py, 9.5 * s, 4 * s, a + 90, line, fill, 1.7);
-      }
-      o += '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(6.5 * s) + '" fill="' + accent +
-        '" stroke="' + line + '" stroke-width="1.7"/>';
-      o += dot(x - 2 * s, y - 2 * s, 1.4 * s, line);
-      return o;
-    },
-
-    // 向日葵：尖花瓣 + 点阵花心
-    sunflower: function (x, y, s, line, fill, accent) {
-      let o = "";
-      for (let i = 0; i < 16; i++) {
-        const a = i * 22.5;
-        const rad = (a * Math.PI) / 180;
-        const x1 = x + Math.cos(rad) * 7 * s;
-        const y1 = y + Math.sin(rad) * 7 * s;
-        const x2 = x + Math.cos(rad) * 18 * s;
-        const y2 = y + Math.sin(rad) * 18 * s;
-        const c1x = x + Math.cos(rad + 0.26) * 14 * s;
-        const c1y = y + Math.sin(rad + 0.26) * 14 * s;
-        const c2x = x + Math.cos(rad - 0.26) * 14 * s;
-        const c2y = y + Math.sin(rad - 0.26) * 14 * s;
-        o += '<path d="M ' + f(x1) + ' ' + f(y1) + ' Q ' + f(c1x) + ' ' + f(c1y) + ' ' + f(x2) + ' ' + f(y2) +
-          ' Q ' + f(c2x) + ' ' + f(c2y) + ' ' + f(x1) + ' ' + f(y1) +
-          '" fill="' + fill + '" stroke="' + line + '" stroke-width="1.7" stroke-linejoin="round"/>';
-      }
-      o += '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(8.5 * s) + '" fill="' + accent +
-        '" stroke="' + line + '" stroke-width="2"/>';
-      for (let i = 0; i < 6; i++) {
-        const a = (i * 60 * Math.PI) / 180;
-        o += dot(x + Math.cos(a) * 4 * s, y + Math.sin(a) * 4 * s, 1.1 * s, line);
-      }
-      return o;
-    },
-
-    // 郁金香：三瓣杯形（顶部带花瓣尖）
-    tulip: function (x, y, s, line, fill) {
-      const p = 'M ' + f(x - 13 * s) + ' ' + f(y + 8 * s) +
-        ' C ' + f(x - 15 * s) + ' ' + f(y - 6 * s) + ' ' + f(x - 9 * s) + ' ' + f(y - 14 * s) + ' ' + f(x - 4.5 * s) + ' ' + f(y - 12 * s) +
-        ' C ' + f(x - 3 * s) + ' ' + f(y - 17 * s) + ' ' + f(x + 3 * s) + ' ' + f(y - 17 * s) + ' ' + f(x + 4.5 * s) + ' ' + f(y - 12 * s) +
-        ' C ' + f(x + 9 * s) + ' ' + f(y - 14 * s) + ' ' + f(x + 15 * s) + ' ' + f(y - 6 * s) + ' ' + f(x + 13 * s) + ' ' + f(y + 8 * s) +
-        ' C ' + f(x + 7 * s) + ' ' + f(y + 16 * s) + ' ' + f(x - 7 * s) + ' ' + f(y + 16 * s) + ' ' + f(x - 13 * s) + ' ' + f(y + 8 * s) + ' Z';
-      let o = '<path d="' + p + '" fill="' + fill + '" stroke="' + line + '" stroke-width="2" stroke-linejoin="round"/>';
-      o += '<path d="M ' + f(x) + ' ' + f(y - 13 * s) + ' L ' + f(x) + ' ' + f(y + 11 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="1.4"/>';
-      o += '<path d="M ' + f(x - 10 * s) + ' ' + f(y - 7 * s) + ' C ' + f(x - 6 * s) + ' ' + f(y + 2 * s) +
-        ' ' + f(x - 6 * s) + ' ' + f(y + 9 * s) + ' ' + f(x - 9 * s) + ' ' + f(y + 13 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="1.4"/>';
-      o += '<path d="M ' + f(x + 10 * s) + ' ' + f(y - 7 * s) + ' C ' + f(x + 6 * s) + ' ' + f(y + 2 * s) +
-        ' ' + f(x + 6 * s) + ' ' + f(y + 9 * s) + ' ' + f(x + 9 * s) + ' ' + f(y + 13 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="1.4"/>';
-      return o;
-    },
-
-    // 绣球花：小花簇
-    hydrangea: function (x, y, s, line, fill, accent) {
-      let o = "";
-      const pts = [[0, -13], [-13, -7], [13, -7], [-16, 5], [0, 1], [16, 5], [-9, 15], [9, 15], [0, 21]];
-      pts.forEach(function (p) {
-        const fx = x + p[0] * s;
-        const fy = y + p[1] * s;
-        const k = 0.82 * s;
-        for (let i = 0; i < 4; i++) {
-          const a = i * 90 + 45;
-          const rad = (a * Math.PI) / 180;
-          o += ellipse(fx + Math.cos(rad) * 4.4 * k, fy + Math.sin(rad) * 4.4 * k, 4.6 * k, 3.4 * k, a, line, fill, 1.5);
-        }
-        o += dot(fx, fy, 1.7 * k, accent);
-      });
-      return o;
-    },
-
-    // 铃兰 / 风铃草：垂挂小铃
-    bell: function (x, y, s, line, fill) {
-      let o = "";
-      const bells = [[-12, -4, 0.85], [1, -13, 0.95], [14, -1, 0.75], [7, 10, 0.7]];
-      bells.forEach(function (b) {
-        const bx = x + b[0] * s;
-        const by = y + b[1] * s;
-        const r = 7.5 * s * b[2];
-        o += '<path d="M ' + f(bx) + ' ' + f(by - r * 1.6) + ' L ' + f(bx) + ' ' + f(by - r * 0.7) +
-          '" stroke="' + line + '" stroke-width="1.5" fill="none"/>';
-        o += '<path d="M ' + f(bx - r) + ' ' + f(by - r * 0.5) +
-          ' C ' + f(bx - r * 1.15) + ' ' + f(by + r * 0.9) + ' ' + f(bx - r * 0.45) + ' ' + f(by + r * 1.25) + ' ' + f(bx) + ' ' + f(by + r * 1.25) +
-          ' C ' + f(bx + r * 0.45) + ' ' + f(by + r * 1.25) + ' ' + f(bx + r * 1.15) + ' ' + f(by + r * 0.9) + ' ' + f(bx + r) + ' ' + f(by - r * 0.5) +
-          ' Q ' + f(bx) + ' ' + f(by - r * 0.1) + ' ' + f(bx - r) + ' ' + f(by - r * 0.5) +
-          '" fill="' + fill + '" stroke="' + line + '" stroke-width="1.8" stroke-linejoin="round"/>';
-      });
-      return o;
-    },
-
-    // 满天星：细枝小星点
-    starry: function (x, y, s, line, fill, accent) {
-      let o = "";
-      const pts = [
-        [-18, -12, 0.8], [-6, -19, 0.7], [8, -16, 0.9], [18, -8, 0.7],
-        [-21, 2, 0.75], [-4, -2, 1.0], [11, 0, 0.8], [20, 8, 0.65],
-        [-14, 13, 0.8], [2, 12, 0.9], [15, 16, 0.7], [-2, 22, 0.65],
-      ];
-      pts.forEach(function (p) {
-        const fx = x + p[0] * s;
-        const fy = y + p[1] * s;
-        const k = p[2] * s;
-        for (let i = 0; i < 5; i++) {
-          const a = i * 72;
-          const rad = (a * Math.PI) / 180;
-          o += '<circle cx="' + f(fx + Math.cos(rad) * 3.1 * k) + '" cy="' + f(fy + Math.sin(rad) * 3.1 * k) +
-            '" r="' + f(1.9 * k) + '" fill="' + fill + '" stroke="' + line + '" stroke-width="1.1"/>';
-        }
-        o += dot(fx, fy, 1.2 * k, accent);
-      });
-      return o;
-    },
-
-    // 山茶 / 洋桔梗：多层圆瓣
-    camellia: function (x, y, s, line, fill, accent) {
-      let o = "";
-      for (let i = 0; i < 6; i++) {
-        const a = i * 60;
-        const rad = (a * Math.PI) / 180;
-        o += ellipse(x + Math.cos(rad) * 9 * s, y + Math.sin(rad) * 9 * s, 9.5 * s, 7.5 * s, a, line, fill, 1.9);
-      }
-      for (let i = 0; i < 5; i++) {
-        const a = i * 72 + 30;
-        const rad = (a * Math.PI) / 180;
-        o += ellipse(x + Math.cos(rad) * 4.6 * s, y + Math.sin(rad) * 4.6 * s, 5.6 * s, 4.4 * s, a, line, fill, 1.6);
-      }
-      o += '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(3.4 * s) + '" fill="' + accent +
-        '" stroke="' + line + '" stroke-width="1.5"/>';
-      return o;
-    },
-
-    // 牡丹：波浪层叠花瓣
-    peony: function (x, y, s, line, fill, accent) {
-      let o = "";
-      // 外圈波浪
-      for (let i = 0; i < 7; i++) {
-        const a = i * (360 / 7);
-        const rad = (a * Math.PI) / 180;
-        o += ellipse(x + Math.cos(rad) * 11 * s, y + Math.sin(rad) * 11 * s, 11 * s, 8 * s, a, line, fill, 1.8);
-      }
-      // 内圈褶皱
-      for (let i = 0; i < 6; i++) {
-        const a = i * 60 + 20;
-        const rad = (a * Math.PI) / 180;
-        o += ellipse(x + Math.cos(rad) * 5.6 * s, y + Math.sin(rad) * 5.6 * s, 6 * s, 4.4 * s, a, line, fill, 1.5);
-      }
-      o += '<path d="M ' + f(x - 3 * s) + ' ' + f(y + 1 * s) + ' a ' + f(3 * s) + ' ' + f(3 * s) + ' 0 1 1 ' + f(5 * s) + ' ' + f(-1 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="1.4" stroke-linecap="round"/>';
-      o += dot(x, y, 1.6 * s, accent);
-      return o;
-    },
-
-    // 栀子花：六瓣 + 旋心
-    gardenia: function (x, y, s, line, fill, accent) {
-      let o = "";
-      for (let i = 0; i < 6; i++) {
-        const a = i * 60;
-        const rad = (a * Math.PI) / 180;
-        o += ellipse(x + Math.cos(rad) * 8.5 * s, y + Math.sin(rad) * 8.5 * s, 9 * s, 6.8 * s, a, line, fill, 1.9);
-      }
-      o += '<path d="M ' + f(x - 4.5 * s) + ' ' + f(y) + ' a ' + f(4.5 * s) + ' ' + f(4.5 * s) + ' 0 1 1 ' + f(7 * s) + ' ' + f(-2 * s) +
-        ' a ' + f(3 * s) + ' ' + f(3 * s) + ' 0 1 1 ' + f(-5 * s) + ' ' + f(2.5 * s) +
-        '" fill="none" stroke="' + line + '" stroke-width="1.5" stroke-linecap="round"/>';
-      o += dot(x, y, 1.5 * s, accent);
-      return o;
-    },
-  };
-
-  // 花枝 + 叶（线条风）
-  function stemsSVG(green) {
-    let s = "";
-    // 主枝
-    s += '<path d="M232 402 C236 350 238 300 240 250 C242 210 244 180 246 158" fill="none" stroke="' + green + '" stroke-width="2.4" stroke-linecap="round"/>';
-    s += '<path d="M232 402 C222 340 208 290 196 236" fill="none" stroke="' + green + '" stroke-width="2.2" stroke-linecap="round"/>';
-    s += '<path d="M232 402 C244 344 262 296 286 240" fill="none" stroke="' + green + '" stroke-width="2.2" stroke-linecap="round"/>';
-    s += '<path d="M232 402 C216 360 196 322 176 282" fill="none" stroke="' + green + '" stroke-width="2" stroke-linecap="round"/>';
-    s += '<path d="M232 402 C250 362 276 330 302 300" fill="none" stroke="' + green + '" stroke-width="2" stroke-linecap="round"/>';
-    // 叶片（线稿）
-    s += '<path d="M236 330 C258 312 260 292 246 286 C232 296 230 316 236 330 Z" fill="none" stroke="' + green + '" stroke-width="2" stroke-linejoin="round"/>';
-    s += '<path d="M228 352 C206 342 200 322 212 316 C226 324 230 340 228 352 Z" fill="none" stroke="' + green + '" stroke-width="2" stroke-linejoin="round"/>';
-    s += '<path d="M244 292 C266 286 276 268 264 262 C250 270 244 282 244 292 Z" fill="none" stroke="' + green + '" stroke-width="2" stroke-linejoin="round"/>';
-    s += '<path d="M220 306 C202 296 194 278 204 272 C218 280 222 294 220 306 Z" fill="none" stroke="' + green + '" stroke-width="2" stroke-linejoin="round"/>';
-    return s;
-  }
-
-  // 包装纸（线稿）
-  function wrapSVG() {
-    let o = "";
-    o += '<path d="M160 306 C196 288 268 288 304 306 L266 404 C252 412 212 412 198 404 Z" fill="#FFFFFF" fill-opacity="0.55" stroke="#C9A98F" stroke-width="2.2" stroke-linejoin="round"/>';
-    o += '<path d="M232 302 L232 404" stroke="#C9A98F" stroke-width="1.6" stroke-dasharray="5 5" fill="none"/>';
-    // 蝴蝶结
-    o += '<path d="M232 300 C222 286 206 288 208 300 C210 310 224 308 232 300" fill="none" stroke="#E0729A" stroke-width="2" stroke-linejoin="round"/>';
-    o += '<path d="M232 300 C242 286 258 288 256 300 C254 310 240 308 232 300" fill="none" stroke="#E0729A" stroke-width="2" stroke-linejoin="round"/>';
-    o += '<circle cx="232" cy="301" r="3.2" fill="#E0729A"/>';
-    return o;
-  }
-
-  // ---------- 花束渲染 ----------
   function renderBouquet() {
     const b = state.bouquet;
-    els.bouquetBox.innerHTML = buildBouquetSVG(b);
+    const rnd = UTIL.seededRandom(UTIL.hashCode("bg" + state.dateKey));
+    els.bouquetBox.innerHTML = window.FLOWERS.build(b, rnd);
     const svg = els.bouquetBox.firstElementChild;
     if (svg) svg.classList.add("bloom");
-    spawnPetals(b.colors);
+    // 纸色调飘落花瓣，克制不抢戏
+    spawnPetals(["#E8E1CC", "#DCD3B8", "#CFC5AA"]);
   }
-
-  function buildBouquetSVG(b) {
-    const line = b.colors[0];
-    const fill = b.colors[1];
-    const accent = b.colors[2];
-    const green = b.colors[3];
-    const render = FLOWER_RENDERERS[b.type] || FLOWER_RENDERERS.rose;
-
-    const rnd = UTIL.seededRandom(UTIL.hashCode("bg" + state.dateKey));
-
-    // 花头位置（不同花型大小差异用 s 调整）
-    const layout = [
-      { x: 232, y: 150, s: 1.26 },
-      { x: 176, y: 200, s: 1.06 },
-      { x: 290, y: 194, s: 1.1 },
-      { x: 204, y: 256, s: 0.94 },
-      { x: 274, y: 258, s: 0.9 },
-      { x: 250, y: 100, s: 0.86 },
-    ];
-
-    let blooms = "";
-    layout.forEach(function (p, i) {
-      const jx = (rnd() - 0.5) * 14;
-      const jy = (rnd() - 0.5) * 12;
-      blooms += render(p.x + jx, p.y + jy, p.s, line, fill, accent, green);
-      if (i === 0) { /* 主花保持最前 */ }
-    });
-
-    // 线条略加粗，让线稿更清晰有质感
-    blooms = bumpStroke(blooms, 1.16);
-
-    // 点缀小星（呼吸感）
-    let sprinkles = "";
-    for (let i = 0; i < 10; i++) {
-      const sx = 175 + rnd() * 120;
-      const sy = 120 + rnd() * 120;
-      sprinkles += '<circle cx="' + f(sx) + '" cy="' + f(sy) + '" r="1.6" fill="' + accent + '" opacity="0.9"/>';
-    }
-
-    return (
-      '<svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg">' +
-      '<g class="stems">' + bumpStroke(stemsSVG(green), 1.2) + "</g>" +
-      '<g class="bouquet-wrap">' + bumpStroke(wrapSVG(), 1.05) + "</g>" +
-      '<g class="flowers">' + blooms + "</g>" +
-      '<g class="sprinkles">' + sprinkles + "</g>" +
-      "</svg>"
-    );
-  }
-
   // 落花粒子
   function spawnPetals(colors) {
     const layer = document.createElement("div");
@@ -830,7 +586,7 @@
     // 开场时点击任意处：解锁音频并立刻播放啵啵
     els.greeting.addEventListener("click", function () {
       ensureAudio();
-      playBoopTwice();
+      sayBo();
     });
   }
 
