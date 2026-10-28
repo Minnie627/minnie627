@@ -6,11 +6,11 @@
 :root {
   --paper: #F2EDDE;
   --paper-deep: #E9E2CE;
-  --ink: #3B4634;          /* 正文墨绿 */
-  --ink-soft: #7E7867;     /* 次要文字 */
-  --accent: #4E6347;       /* 主色：植物绿 */
-  --accent-soft: #8A9B7E;
-  --line: rgba(63, 76, 57, 0.28);
+  --ink: #4C5647;          /* 正文墨绿（调淡） */
+  --ink-soft: #8B8574;     /* 次要文字 */
+  --accent: #64745A;       /* 主色：植物绿（调淡） */
+  --accent-soft: #9AA890;
+  --line: rgba(92, 106, 82, 0.26);
   --card: rgba(255, 253, 246, 0.55);
   --shadow: 0 6px 22px rgba(94, 84, 62, 0.12);
   --radius: 14px;
@@ -32,20 +32,17 @@ html, body {
   overscroll-behavior: none;
 }
 
-/* 陈旧米白纸张：纸浆颗粒 + 泛黄晕染 */
+/* 入场背景：淡米白（近白）老旧纸感，无边框、无线条 */
 body {
   font-family: "Songti SC", "Noto Serif SC", Georgia, "SimSun", serif;
-  background-color: var(--paper);
+  background-color: #FBF9F3;
   background-image:
-    /* 纸浆颗粒 */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23g)' opacity='0.14'/%3E%3C/svg%3E"),
-    /* 纤维纹 */
-    repeating-linear-gradient(92deg, rgba(150, 135, 105, 0.045) 0 1px, transparent 1px 4px),
-    /* 泛黄晕染 */
-    radial-gradient(ellipse at 12% 8%, rgba(255, 252, 240, 0.85), transparent 46%),
-    radial-gradient(ellipse at 88% 92%, rgba(198, 182, 146, 0.28), transparent 55%),
-    radial-gradient(ellipse at 74% 14%, rgba(208, 192, 158, 0.20), transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(246, 241, 228, 0.55), transparent 72%);
+    /* 纸浆颗粒（老旧质感，非线条） */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23g)' opacity='0.10'/%3E%3C/svg%3E"),
+    /* 极淡的泛黄晕染 */
+    radial-gradient(ellipse at 14% 10%, rgba(255, 255, 252, 0.9), transparent 48%),
+    radial-gradient(ellipse at 86% 90%, rgba(226, 216, 190, 0.22), transparent 55%),
+    radial-gradient(ellipse at 76% 16%, rgba(232, 224, 202, 0.16), transparent 44%);
   color: var(--ink);
   display: flex;
   align-items: center;
@@ -55,25 +52,14 @@ body {
   -webkit-user-select: none;
 }
 
-/* 纸边老化暗角 */
+/* 纸面轻微不均匀（无边框、无描线） */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at center, transparent 52%, rgba(146, 128, 94, 0.20) 100%),
-    linear-gradient(180deg, rgba(146, 128, 94, 0.10), transparent 16%, transparent 84%, rgba(146, 128, 94, 0.14));
-  z-index: 0;
-}
-
-/* 细纸边 */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 10px;
-  border: 1px solid rgba(63, 76, 57, 0.10);
-  pointer-events: none;
+    radial-gradient(ellipse at center, transparent 60%, rgba(180, 165, 132, 0.09) 100%);
   z-index: 0;
 }
 
@@ -90,6 +76,25 @@ body::after {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease;
+  /* 开场保留原来的粉色背景 */
+  background: linear-gradient(180deg, #FFF7F0 0%, #FFEDE6 52%, #FFE3DB 100%);
+}
+
+/* 开场的粉色柔光斑（不是线条） */
+#greeting::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 24%, rgba(245, 166, 184, 0.30), transparent 40%),
+    radial-gradient(circle at 80% 72%, rgba(255, 210, 168, 0.32), transparent 42%),
+    radial-gradient(circle at 66% 14%, rgba(255, 226, 214, 0.55), transparent 38%);
+}
+
+#greeting > * {
+  position: relative;
+  z-index: 1;
 }
 
 #greeting.show {

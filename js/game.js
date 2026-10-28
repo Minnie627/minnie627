@@ -84,7 +84,18 @@
   // 一声「啵」：频率快速下坠 + 低通，模拟唇齿轻碰的可爱音
   function playBoop(delay, pitch) {
     const ctx = ensureAudio();
-    if (!ctx || ctx.state !== "running") return false;
+    if (!ctx) return false;
+    if (ctx.state !== "running") {
+      // 首次手势时 resume() 是异步的，此时立刻播放会被丢弃 —— 恢复后再补播
+      try {
+        const pr = ctx.resume();
+        if (pr && typeof pr.then === "function") {
+          pr.then(function () { playBoop((delay || 0) + 0.02, pitch); });
+          return true;
+        }
+      } catch (e) {}
+      return false;
+    }
     const t0 = ctx.currentTime + (delay || 0);
     const base = pitch || 880;
 
@@ -105,8 +116,8 @@
     filter.frequency.exponentialRampToValueAtTime(600, t0 + 0.15);
 
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(0.32, t0 + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.17);
+    gain.gain.exponentialRampToValueAtTime(0.95, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
 
     osc.connect(filter);
     filter.connect(gain);
@@ -173,11 +184,12 @@
     }
   }
 
-  // 统一入口：优先童声，不可用则退回合成「啵」音
+  // 统一入口：先发合成「啵」音（必定有声），再叠加童声朗读
+  // 说明：部分设备的语音合成缺中文音色时会静默失败，所以不能被它挡住
   function sayBo() {
-    const ok = speakBo();
-    if (!ok) playBoopTwice();
-    return ok;
+    playBoopTwice();
+    speakBo();            // 同步调用：iOS 要求语音在手势栈内启动
+    return true;
   }
 
   // 领取时的小音符（上行三音）
@@ -191,7 +203,7 @@
       osc.type = "triangle";
       osc.frequency.setValueAtTime(f, t0);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.55, t0 + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -204,14 +216,19 @@
   function bindAudioUnlock() {
     const unlock = function () {
       const ctx = ensureAudio();
-      if (ctx && ctx.state !== "running") {
-        try { ctx.resume(); } catch (e) {}
+      if (ctx) {
+        // iOS 需要一次静音播放来真正解锁音频
+        try {
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (e) {}
+        if (ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
       }
       state.audioReady = true;
-      if (!state.boopPlayed) {
-        // 延迟一点点，等 resume 生效
-        setTimeout(function () { sayBo(); }, 60);
-      }
+      if (!state.boopPlayed) sayBo();
       if (els.greetHint) els.greetHint.classList.add("hide");
       document.removeEventListener("pointerdown", unlock);
       document.removeEventListener("touchstart", unlock);
