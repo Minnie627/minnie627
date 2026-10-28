@@ -27,7 +27,6 @@
     greeting: $("#greeting"),
     greetingText: $("#greetingText"),
     greetingSub: $("#greetingSub"),
-    greetHint: $("#greetHint"),
     main: $("#main"),
     bouquetWrap: $("#bouquetWrap"),
     handwrite: $("#handwrite"),
@@ -46,11 +45,6 @@
     historyList: $("#historyList"),
     historyStats: $("#historyStats"),
     historyClose: $("#historyClose"),
-    btnData: $("#btnData"),
-    btnCopyData: $("#btnCopyData"),
-    dataSheet: $("#dataSheet"),
-    dataCode: $("#dataCode"),
-    dataClose: $("#dataClose"),
     loveModal: $("#loveModal"),
     loveText: $("#loveText"),
     loveClose: $("#loveClose"),
@@ -82,8 +76,9 @@
     return audioCtx;
   }
 
-  // 一声「啵」：频率快速下坠 + 低通，模拟唇齿轻碰的可爱音
-  function playBoop(delay, pitch) {
+  // 一声「啵」：双唇爆破 + /o/ 元音共振峰，高音高 → 奶音童声
+  // 完全由 Web Audio 合成，不依赖系统中文语音包，任何浏览器都发得出声
+  function playBoop(delay, pitchScale) {
     const ctx = ensureAudio();
     if (!ctx) return false;
     if (ctx.state !== "running") {
@@ -91,44 +86,49 @@
       try {
         const pr = ctx.resume();
         if (pr && typeof pr.then === "function") {
-          pr.then(function () { playBoop((delay || 0) + 0.02, pitch); });
+          pr.then(function () { playBoop((delay || 0) + 0.02, pitchScale); });
           return true;
         }
       } catch (e) {}
       return false;
     }
+    const s = pitchScale || 1;
     const t0 = ctx.currentTime + (delay || 0);
-    const base = pitch || 880;
+    const dur = 0.30;
+    const f0 = 355 * s;                       // 童声音高（约 350Hz）
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, t0);
+    out.gain.exponentialRampToValueAtTime(0.50, t0 + 0.022);
+    out.gain.setValueAtTime(0.50, t0 + 0.10);
+    out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    out.connect(ctx.destination);
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(base, t0);
-    osc.frequency.exponentialRampToValueAtTime(base * 0.22, t0 + 0.13);
-    // 轻微的音高上扬，更俏皮
-    osc.frequency.setValueAtTime(base * 0.9, t0);
-    osc.frequency.exponentialRampToValueAtTime(base, t0 + 0.02);
-    osc.frequency.exponentialRampToValueAtTime(base * 0.2, t0 + 0.14);
+    // 声门源：锯齿波，音高轻微下滑，像说话不像电子音
+    const src = ctx.createOscillator();
+    src.type = "sawtooth";
+    src.frequency.setValueAtTime(f0 * 1.08, t0);
+    src.frequency.exponentialRampToValueAtTime(f0 * 0.80, t0 + dur);
 
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(2400, t0);
-    filter.frequency.exponentialRampToValueAtTime(600, t0 + 0.15);
+    // 三个共振峰（儿童声道更短 → 频率偏高）
+    [[600, 6, 1.0], [1150, 8, 0.55], [2650, 10, 0.16]].forEach(function (f) {
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(f[0] * s, t0);
+      bp.frequency.exponentialRampToValueAtTime(f[0] * s * 0.94, t0 + dur);
+      bp.Q.setValueAtTime(f[1], t0);
+      const g = ctx.createGain();
+      g.gain.value = f[2];
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(out);
+    });
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
 
-    gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(0.42, t0 + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t0);
-    osc.stop(t0 + 0.22);
-
-    // 极轻的气声起音：让「啵」像唇齿轻碰，而不是电子滴声
+    // 双唇爆破的气声起音
     try {
-      const len = Math.ceil(ctx.sampleRate * 0.028);
+      const len = Math.ceil(ctx.sampleRate * 0.022);
       const nb = ctx.createBuffer(1, len, ctx.sampleRate);
       const nd = nb.getChannelData(0);
       for (let i = 0; i < len; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / len);
@@ -136,12 +136,12 @@
       ns.buffer = nb;
       const nf = ctx.createBiquadFilter();
       nf.type = "bandpass";
-      nf.frequency.setValueAtTime(1300, t0);
-      nf.Q.setValueAtTime(1.2, t0);
+      nf.frequency.setValueAtTime(900 * s, t0);
+      nf.Q.setValueAtTime(0.9, t0);
       const ng = ctx.createGain();
       ng.gain.setValueAtTime(0.0001, t0);
-      ng.gain.exponentialRampToValueAtTime(0.13, t0 + 0.004);
-      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.026);
+      ng.gain.exponentialRampToValueAtTime(0.17, t0 + 0.004);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.022);
       ns.connect(nf);
       nf.connect(ng);
       ng.connect(ctx.destination);
@@ -151,33 +151,43 @@
     return true;
   }
 
-  // 「啵啵」两声，音高略不同，更像嘴巴发出的声音（语音不可用时的兜底）
+  // 「啵啵」两声，第二声略高，更像小孩说话的语调
   function playBoopTwice() {
-    const ok1 = playBoop(0, 900);
-    const ok2 = playBoop(0.19, 760);
+    const ok1 = playBoop(0, 1.0);
+    const ok2 = playBoop(0.23, 1.14);
     if (ok1 || ok2) state.boopPlayed = true;
     return ok1 || ok2;
   }
 
-  // ---------- 稚幼童声朗读「bō」「bó」 ----------
+  // ---------- 系统语音：有中文音色时再叠一层真·童声朗读 ----------
   let voiceList = [];
+  let ttsStarted = false;
 
   function refreshVoices() {
     if (!window.speechSynthesis) return;
     try { voiceList = speechSynthesis.getVoices() || []; } catch (e) { voiceList = []; }
   }
 
-  // 优先中文女声/童声音色 —— 更接近「啵啵」的奶音
+  // 童声优先：Windows 的 Yaoyao、iOS 的 Ting-Ting 儿童版都在这类命名里
+  const CHILD_RE = /yaoyao|xiaoshuang|童|child|kid|girl|junior|小新|宝宝/i;
+  const FEMALE_RE = /xiaoyi|xiaoxiao|xiaohan|xiaomeng|huihui|ting|mei|female|女/i;
+
   function pickZhVoice() {
     if (!voiceList.length) refreshVoices();
     if (!voiceList.length) return null;
     const zh = voiceList.filter(function (v) { return /^zh/i.test(v.lang || ""); });
     if (!zh.length) return null;
-    const prefer = /xiaoyi|xiaoxiao|xiaohan|xiaomeng|xiaoshuang|huihui|yaoyao|ting|mei|female|女|童|child|kid|girl|junior/i;
-    return zh.find(function (v) { return prefer.test(v.name || ""); }) || zh[0];
+    // 1) 童声  2) 女声  3) 任意中文音色
+    return zh.find(function (v) { return CHILD_RE.test(v.name || ""); }) ||
+           zh.find(function (v) { return FEMALE_RE.test(v.name || ""); }) ||
+           zh[0];
   }
 
-  // 完全没有中文音色时，退而求其次挑一个女声，并用 "bo" 让它至少能发出声音
+  function isChildVoice(v) {
+    return !!(v && CHILD_RE.test(v.name || ""));
+  }
+
+  // 没有中文音色时，退而求其次挑一个女声，用 "bo" 发音（否则中文会被静默丢弃）
   function pickAnyVoice() {
     if (!voiceList.length) refreshVoices();
     if (!voiceList.length) return null;
@@ -190,11 +200,24 @@
     try { speechSynthesis.onvoiceschanged = refreshVoices; } catch (e) {}
   }
 
+  // 音色表在 Chrome 里是异步加载的，首屏常为空 —— 等一小会儿再决定要不要走 TTS
+  function whenVoices(cb, timeout) {
+    if (voiceList.length) { cb(); return; }
+    let done = false;
+    const fire = function () {
+      if (done) return;
+      done = true;
+      refreshVoices();
+      cb();
+    };
+    try { speechSynthesis.addEventListener("voiceschanged", fire, { once: true }); } catch (e) {}
+    setTimeout(fire, timeout || 700);
+  }
+
   function utter(text, pitch, rate, delay) {
     const sy = window.speechSynthesis;
     const run = function () {
       const v = pickZhVoice() || pickAnyVoice();
-      // 有中文音色 → 读「啵」；只有外语音色 → 用 "bo" 发近似音（否则会静默失败）
       const noZh = !!(v && !/^zh/i.test(v.lang || ""));
       try {
         const u = new SpeechSynthesisUtterance(noZh ? "bo" : text);
@@ -203,6 +226,7 @@
         u.rate = rate;
         u.volume = 1;      // 拉满
         if (v) u.voice = v;
+        u.onstart = function () { ttsStarted = true; };
         u.onerror = function () {};
         sy.speak(u);
       } catch (e) {}
@@ -214,30 +238,38 @@
   function speakBo() {
     const sy = window.speechSynthesis;
     if (!sy || typeof window.SpeechSynthesisUtterance === "undefined") return false;
+    const v0 = pickZhVoice() || pickAnyVoice();
+    if (!v0) return false;                                  // 系统里一个音色都没有 → 交给合成音
     refreshVoices();
     try { sy.cancel(); } catch (e) {}
     try { if (sy.paused) sy.resume(); } catch (e) {}
 
-    utter("啵", 1.72, 0.72, 60);
-    utter("啵", 1.9, 0.58, 660);
-
-    // 兜底：若 1.6s 后完全没在播放，用最朴素的方式再读一次
-    setTimeout(function () {
-      if (!sy.speaking && !sy.pending) {
-        utter("啵啵", 1.7, 0.8, 0);
-      }
-    }, 1600);
+    // 本身就是童声的音色不需要再拉高那么多，否则会失真
+    const child = isChildVoice(v0) || !/^zh/i.test(v0.lang || "");
+    const p1 = child ? 1.12 : 1.72;
+    const p2 = child ? 1.22 : 1.9;
+    utter("啵", p1, child ? 0.86 : 0.72, 60);
+    utter("啵", p2, child ? 0.74 : 0.58, 660);
     return true;
   }
 
-  // 统一入口：先发合成「啵」音（必定有声），再叠加童声朗读
-  // 说明：部分设备的语音合成缺中文音色时会静默失败，所以不能被它挡住
+  // 统一入口：优先真·童声（TTS），900ms 内没起播就用合成童声兜底 —— 保证一定有「啵啵」
+  function startBoVoice() {
+    const hasVoice = !!(pickZhVoice() || pickAnyVoice());
+    if (!hasVoice) { playBoopTwice(); return; }        // 系统无音色 → 直接合成
+    ttsStarted = false;
+    speakBo();
+    setTimeout(function () {
+      if (!ttsStarted) playBoopTwice();                // TTS 没起来 → 合成兜底
+    }, 1200);
+  }
+
   function sayBo() {
     const now = Date.now();
     if (now - state.lastBoAt < 700) return true;   // 一次手势里 pointerdown + click 会连发，去重
     state.lastBoAt = now;
-    playBoopTwice();
-    speakBo();            // 同步调用：iOS 要求语音在手势栈内启动
+    if (voiceList.length) startBoVoice();          // 音色已就绪 → 同步在手势栈内朗读
+    else whenVoices(startBoVoice, 700);
     return true;
   }
 
@@ -261,7 +293,7 @@
     });
   }
 
-  // 首次手势解锁音频（移动端自动播放限制）
+  // 首次手势解锁音频（浏览器强制：没有交互就不许出声，语音合成同样如此）
   function bindAudioUnlock() {
     const unlock = function () {
       const ctx = ensureAudio();
@@ -277,20 +309,13 @@
         if (ctx.state !== "running") { try { ctx.resume(); } catch (e) {} }
       }
       state.audioReady = true;
-      // 预热语音引擎：先静音说一句，避免第一次真正朗读被浏览器吞掉
-      try {
-        const warm = new SpeechSynthesisUtterance(" ");
-        warm.volume = 0;
-        warm.lang = "zh-CN";
-        speechSynthesis.speak(warm);
-      } catch (e) {}
-      if (!state.boopPlayed) sayBo();
-      if (els.greetHint) els.greetHint.classList.add("hide");
-      document.removeEventListener("pointerdown", unlock);
-      document.removeEventListener("touchstart", unlock);
+      sayBo();                     // 首次手势必定补播一次（throttle 会去重）
+      OFF.forEach(function (ev) { document.removeEventListener(ev, unlock); });
     };
-    document.addEventListener("pointerdown", unlock, { once: true, passive: true });
-    document.addEventListener("touchstart", unlock, { once: true, passive: true });
+    const OFF = ["pointerdown", "touchstart", "click", "keydown", "wheel"];
+    OFF.forEach(function (ev) {
+      document.addEventListener(ev, unlock, { once: true, passive: true });
+    });
   }
 
   // ---------- 初始化 ----------
@@ -339,7 +364,6 @@
     });
 
     els.greetingSub.textContent = CFG.greetingSub;
-    if (els.greetHint) els.greetHint.textContent = CFG.greetHint;
 
     els.greeting.classList.add("show");
     els.greetingText.classList.add("pop");
@@ -363,7 +387,7 @@
   // ============================================================
   function startReveal() {
     // 1) 手写字
-    els.handwrite.innerHTML = buildHandwriteSVG();
+    els.handwrite.innerHTML = '<span class="hw-de">dc</span>';
     els.handwrite.classList.remove("hw-out");
     els.handwrite.style.display = "flex";
     els.bouquetBox.classList.remove("show");
@@ -371,11 +395,11 @@
     els.quoteCard.classList.remove("show");
 
     // 从左到右一笔写出
-    const hwSvg = els.handwrite.querySelector(".handwrite-svg");
-    if (hwSvg) {
-      hwSvg.classList.remove("on");
-      void hwSvg.getBoundingClientRect();
-      hwSvg.classList.add("on");
+    const hwDe = els.handwrite.querySelector(".hw-de");
+    if (hwDe) {
+      hwDe.classList.remove("on");
+      void hwDe.getBoundingClientRect();
+      hwDe.classList.add("on");
     }
 
     // 2) 手写淡出
@@ -398,114 +422,6 @@
     setTimeout(function () {
       els.quoteCard.classList.add("show");
     }, CFG.anim.handwrite + CFG.anim.handwriteOut + 720);
-  }
-
-  // ============================================================
-  // 毛笔体「dc」：用可变宽度的填充轮廓模拟笔锋（对照参考图）
-  // 参考图的字形不是等宽线，而是毛笔书写：起笔粗、收笔细、端点圆润
-  // ============================================================
-  function hwSample(seg, steps) {
-    var p0 = seg[0], c1 = seg[1], c2 = seg[2], p3 = seg[3], out = [];
-    for (var i = 0; i <= steps; i++) {
-      var t = i / steps, u = 1 - t;
-      out.push([
-        u * u * u * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p3[0],
-        u * u * u * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p3[1]
-      ]);
-    }
-    return out;
-  }
-
-  function hwRibbon(pts, wFn) {
-    var L = [], R = [], i, p, a, b, dx, dy, m, nx, ny, w, d;
-    for (i = 0; i < pts.length; i++) {
-      p = pts[i];
-      a = pts[Math.max(0, i - 1)];
-      b = pts[Math.min(pts.length - 1, i + 1)];
-      dx = b[0] - a[0];
-      dy = b[1] - a[1];
-      m = Math.sqrt(dx * dx + dy * dy) || 1;
-      nx = -dy / m;
-      ny = dx / m;
-      w = wFn(i / (pts.length - 1)) / 2;
-      L.push([p[0] + nx * w, p[1] + ny * w]);
-      R.push([p[0] - nx * w, p[1] - ny * w]);
-    }
-    d = "M" + L[0][0].toFixed(1) + " " + L[0][1].toFixed(1);
-    for (i = 1; i < L.length; i++) d += " L" + L[i][0].toFixed(1) + " " + L[i][1].toFixed(1);
-    for (i = R.length - 1; i >= 0; i--) d += " L" + R[i][0].toFixed(1) + " " + R[i][1].toFixed(1);
-    return d + " Z";
-  }
-
-  function hwCap(x, y, w) {
-    return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (w / 2).toFixed(1) + '"/>';
-  }
-
-  function hwStroke(seg, wFn, steps) {
-    var pts = hwSample(seg, steps || 24);
-    var last = pts[pts.length - 1];
-    return '<path d="' + hwRibbon(pts, wFn) + '"/>' +
-      hwCap(pts[0][0], pts[0][1], wFn(0)) + hwCap(last[0], last[1], wFn(1));
-  }
-
-  function hwArcPts(cx, cy, rx, ry, a0, a1, steps) {
-    var pts = [], i, a;
-    for (i = 0; i <= steps; i++) {
-      a = a0 + (a1 - a0) * (i / steps);
-      pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
-    }
-    return pts;
-  }
-
-  function hwArc(cx, cy, rx, ry, a0, a1, wFn, steps) {
-    var pts = [], i, t, a;
-    for (i = 0; i <= steps; i++) {
-      t = i / steps;
-      a = a0 + (a1 - a0) * t;
-      pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
-    }
-    var last = pts[pts.length - 1];
-    return '<path d="' + hwRibbon(pts, wFn) + '"/>' +
-      hwCap(pts[0][0], pts[0][1], wFn(0)) + hwCap(last[0], last[1], wFn(1));
-  }
-
-  function hwPoly(pts, wFn) {
-    var last = pts[pts.length - 1];
-    return '<path d="' + hwRibbon(pts, wFn) + '"/>' +
-      hwCap(pts[0][0], pts[0][1], wFn(0)) + hwCap(last[0], last[1], wFn(1));
-  }
-
-  function buildHandwriteSVG() {
-    // 淡淡的细笔锋：整字很轻，只在转折处略粗
-    var C = "#CFD9C4";
-    var body = "";
-
-    // ---- d：先绕碗一圈，收笔时顺势向上提成竖（一条笔路走完）----
-    var cx = 72, cy = 116, rx = 42, ry = 39, a0 = -0.30;
-    var bowl = hwArcPts(cx, cy, rx, ry, a0, a0 - Math.PI * 2, 108);
-    var p0 = bowl[bowl.length - 1];                       // ≈(113.9, 104.5) 2:30 处
-    var asc = hwSample([[p0[0], p0[1]], [112, 78], [110, 46], [113, 12]], 44);
-    var dPts = bowl.concat(asc.slice(1));
-    var dEnd = dPts[dPts.length - 1];
-    var dW = function (t) {
-      return 6.3 + 0.45 * Math.sin(t * Math.PI * 2) - 0.95 * Math.max(0, t - 0.86) / 0.14;
-    };
-    body += '<path d="' + hwRibbon(dPts, dW) + '"/>' + hwCap(dEnd[0], dEnd[1], dW(1));
-
-    // ---- c：右侧开口，两端自然收细 ----
-    var cArc = hwArcPts(176, 120, 31, 33, -1.05, -1.05 - Math.PI * 2 * 0.84, 96);
-    body += hwPoly(cArc, function (t) {
-      return 4.9 + 1.9 * Math.sin(t * Math.PI);
-    });
-
-    // 内容包围盒 x 28~209 / y 15~158，居中到 (110, 88) 后整体微倾
-    return (
-      '<svg viewBox="0 0 220 176" class="handwrite-svg" xmlns="http://www.w3.org/2000/svg">' +
-        '<g fill="' + C + '" transform="translate(110 88) rotate(-2) skewX(-5) translate(-118.5 -86.5)">' +
-        body +
-        "</g>" +
-      "</svg>"
-    );
   }
 
   // ---------- 场景文本 ----------
@@ -644,38 +560,6 @@
     els.historyList.innerHTML = html;
   }
 
-  // 数据查询面板：展示原始数据 + 今日详情
-  function openDataPanel() {
-    const payload = {
-      storageKey: STORAGE_KEY,
-      today: {
-        date: state.dateKey,
-        flower: state.bouquet.name,
-        mood: state.bouquet.mood,
-        quote: state.quote,
-        collected: state.collected,
-      },
-      stats: computeStats(),
-      records: state.history,
-    };
-    els.dataCode.textContent = JSON.stringify(payload, null, 2);
-    els.dataSheet.classList.add("show");
-  }
-  function closeDataPanel() {
-    els.dataSheet.classList.remove("show");
-  }
-
-  function copyData() {
-    const text = els.dataCode.textContent || "";
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        showToast("数据已复制 📋");
-      }).catch(function () { showToast("复制失败，请长按选择文本"); });
-    } else {
-      showToast("请长按选择文本复制");
-    }
-  }
-
   // ---------- 分享 ----------
   function shareFlower() {
     const text = "【每日一束花】今天送你一束" + state.bouquet.name + "：" + state.quote;
@@ -722,29 +606,6 @@
     els.historySheet.addEventListener("click", function (e) {
       if (e.target === els.historySheet) closeHistory();
     });
-    if (els.btnData) {
-      els.btnData.addEventListener("click", function (e) {
-        e.preventDefault();
-        openDataPanel();
-      });
-    }
-    if (els.btnCopyData) {
-      els.btnCopyData.addEventListener("click", function (e) {
-        e.preventDefault();
-        copyData();
-      });
-    }
-    if (els.dataClose) {
-      els.dataClose.addEventListener("click", function (e) {
-        e.preventDefault();
-        closeDataPanel();
-      });
-    }
-    if (els.dataSheet) {
-      els.dataSheet.addEventListener("click", function (e) {
-        if (e.target === els.dataSheet) closeDataPanel();
-      });
-    }
     els.loveClose.addEventListener("click", function (e) {
       e.preventDefault();
       hideLoveModal();
@@ -769,6 +630,22 @@
   // ============================================================
   window.FlowerGame = {
     storageKey: STORAGE_KEY,
+    // 语音自查：控制台执行 FlowerGame.debug() 可看到音色数量与播放状态
+    debug: function () {
+      const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+      const zh = vs.filter(function (v) { return /^zh/i.test(v.lang || ""); });
+      return {
+        voices: vs.length,
+        zhVoices: zh.length,
+        zhNames: zh.slice(0, 6).map(function (v) { return v.name + "(" + v.lang + ")"; }),
+        picked: (pickZhVoice() || pickAnyVoice() || {}).name || "none",
+        ttsStarted: ttsStarted,
+        boopPlayed: state.boopPlayed,
+        audioState: audioCtx ? audioCtx.state : "none",
+        lastBoAt: state.lastBoAt,
+      };
+    },
+    replayBo: function () { state.lastBoAt = 0; return sayBo(); },
     getToday: function () {
       return {
         date: state.dateKey,

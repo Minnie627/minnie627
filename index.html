@@ -13,7 +13,6 @@
   <div id="greeting">
     <div id="greetingText"></div>
     <div id="greetingSub"></div>
-    <div id="greetHint"></div>
   </div>
 
   <!-- 主场景 -->
@@ -58,22 +57,6 @@
       </div>
       <div class="stats" id="historyStats"></div>
       <div id="historyList"></div>
-      <div class="sheet-footer">
-        <button class="btn-mini" id="btnData">查看领取数据</button>
-        <button class="btn-mini" id="btnCopyData">复制数据</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 数据查询面板 -->
-  <div id="dataSheet">
-    <div class="sheet data-sheet">
-      <div class="sheet-header">
-        <h2>领取数据（可查询 / 导出）</h2>
-        <button class="sheet-close" id="dataClose">✕</button>
-      </div>
-      <p class="data-tip">数据保存在本机浏览器 localStorage，键名：<code>flower_history</code>。也可在控制台用 <code>FlowerGame.exportJSON()</code> 查询。</p>
-      <pre id="dataCode" class="data-code"></pre>
     </div>
   </div>
 

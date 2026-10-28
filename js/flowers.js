@@ -450,7 +450,7 @@
     }
 
     return (
-      '<svg viewBox="112 132 310 522" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg" preserveAspectRatio="xMidYMid meet">' +
+      '<svg viewBox="88 130 336 512" xmlns="http://www.w3.org/2000/svg" class="bouquet-svg" preserveAspectRatio="xMidYMid meet">' +
       defs(id) +
       '<g class="wash">' + washLayer(id, rnd) + "</g>" +
       '<g class="leaves">' + leaves + "</g>" +
