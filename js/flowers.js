@@ -167,24 +167,25 @@
       "</g>";
   }
 
-  // 花心
+  // 花心：淡黄晕 + 花粉点 + 青绿雌蕊（尺寸随花朵半径等比缩放）
   function stamen(r, id) {
-    var o = '<circle r="' + n(r * 0.36) + '" fill="' + WC.center + '" opacity="0.62" filter="url(#' + id + 'soft)"/>';
+    var dr = Math.max(0.55, r * 0.042);
+    var o = '<circle r="' + n(r * 0.30) + '" fill="' + WC.center + '" opacity="0.55" filter="url(#' + id + 'soft)"/>';
     var i, a, rad;
     for (i = 0; i < 15; i++) {
       a = i * 0.92 + 0.4;
-      rad = r * (0.06 + 0.25 * Math.sqrt(i / 15));
+      rad = r * (0.06 + 0.22 * Math.sqrt(i / 15));
       o += '<circle cx="' + n(Math.cos(a) * rad) + '" cy="' + n(Math.sin(a) * rad) + '" r="' +
-        n(1.7 + (i % 3) * 0.5) + '" fill="' + WC.anther + '" opacity="0.9"/>';
+        n(dr * (1 + (i % 3) * 0.28)) + '" fill="' + WC.anther + '" opacity="0.88"/>';
     }
     for (i = 0; i < 6; i++) {
       a = (i * 60 + 12) * Math.PI / 180;
-      o += '<path d="M0 0 Q ' + n(Math.cos(a) * r * 0.09) + ' ' + n(Math.sin(a) * r * 0.09) +
-        ' ' + n(Math.cos(a) * r * 0.20) + ' ' + n(Math.sin(a) * r * 0.20) + '" fill="none" stroke="' +
-        WC.pistil + '" stroke-width="1.7" stroke-linecap="round" opacity="0.75"/>';
+      o += '<path d="M0 0 Q ' + n(Math.cos(a) * r * 0.08) + ' ' + n(Math.sin(a) * r * 0.08) +
+        ' ' + n(Math.cos(a) * r * 0.17) + ' ' + n(Math.sin(a) * r * 0.17) + '" fill="none" stroke="' +
+        WC.pistil + '" stroke-width="' + n(Math.max(0.9, r * 0.035)) + '" stroke-linecap="round" opacity="0.7"/>';
     }
-    o += '<circle r="' + n(r * 0.06) + '" fill="' + WC.pistil + '" opacity="0.85"/>';
-    return '<g filter="url(#' + id + 'blur)" >' + o + "</g>";
+    o += '<circle r="' + n(Math.max(1.1, r * 0.05)) + '" fill="' + WC.pistil + '" opacity="0.85"/>';
+    return '<g filter="url(#' + id + 'blur)">' + o + "</g>";
   }
 
   function blossom(r, P, rot, id, rnd) {
@@ -202,7 +203,7 @@
   function domeCluster(r, P, rot, id, rnd) {
     var o = "", ring, i, cnt, places = [[0, 0]];
     for (ring = 0; ring < 2; ring++) {
-      cnt = ring === 0 ? 5 : 6;
+      cnt = ring === 0 ? 4 : 6;
       for (i = 0; i < cnt; i++) {
         var a = rot + i * (360 / cnt) + ring * 26;
         var rad = r * (ring === 0 ? 0.44 : 0.76);
@@ -211,7 +212,7 @@
     }
     for (i = 0; i < places.length; i++) {
       o += '<g transform="translate(' + n(places[i][0]) + ' ' + n(places[i][1]) + ')">' +
-        blossom(r * (i === 0 ? 0.38 : 0.33), { petals: 4, petalW: 0.52 }, rot + i * 37, id, rnd) + "</g>";
+        blossom(r * (i === 0 ? 0.42 : 0.36), { petals: 4, petalW: 0.52 }, rot + i * 37, id, rnd) + "</g>";
     }
     return o;
   }
