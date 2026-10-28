@@ -93,54 +93,91 @@ body::after {
   opacity: 0;
 }
 
+/* ---------- 「啵啵~」透明果冻立体字 ---------- */
 #greetingText {
-  font-size: 96px;
-  font-weight: 900;
-  color: var(--accent);
-  letter-spacing: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 圆润可爱的字形 */
-  font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  gap: 0.02em;
+  font-size: clamp(64px, 21vw, 100px);
+  font-weight: 900;
+  letter-spacing: 0;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   opacity: 0;
-  /* 文字描边 + 软阴影，做出果冻可爱质感 */
-  text-shadow: 0 6px 18px rgba(232, 106, 140, 0.35);
-  -webkit-text-stroke: 2px #fff;
+  transition: opacity 0.3s ease;
 }
 
-/* 每个字：弹跳入场 + 持续摇摆 */
-#greetingText .bounce-char {
+#greetingText.pop { opacity: 1; }
+
+/* 每个字：果冻渐变 + 高光 + 弹跳 */
+.bounce-char {
+  position: relative;
   display: inline-block;
+  line-height: 1.08;
+  color: #ef5f8d;                 /* 兜底色（不支持 background-clip 时可见） */
   opacity: 0;
-  transform: translateY(60px) scale(0.3);
-  animation: char-bounce-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-             char-wiggle 1.8s ease-in-out infinite;
-  /* wiggle 在入场完成后开始 */
+  transform: translateY(46px) scale(0.4);
+  /* 果冻立体：白色内高光 → 粉 → 深粉收边，不用描边，避免笔画交叉处重叠 */
+  animation: jelly-in 0.78s cubic-bezier(0.34, 1.62, 0.5, 1) forwards,
+             jelly-bob 2.4s ease-in-out infinite;
 }
 
-#greetingText .bounce-char:nth-child(1) { animation-delay: 0s, 0.55s; }
-#greetingText .bounce-char:nth-child(2) { animation-delay: 0.12s, 0.67s; }
-#greetingText .bounce-char:nth-child(3) { animation-delay: 0.24s, 0.79s; }
+/* 支持 background-clip 的浏览器：透明填充 + 多层投影做出胶质厚度 */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .bounce-char {
+    background: linear-gradient(
+      177deg,
+      #ffffff 0%,
+      #ffe9f2 16%,
+      #ffb8d0 42%,
+      #f4719b 70%,
+      #de5280 88%,
+      #cf4472 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
+            drop-shadow(0 4px 0 rgba(207, 68, 114, 0.28))
+            drop-shadow(0 9px 13px rgba(232, 106, 140, 0.32));
+  }
 
-/* 弹跳入场 */
-@keyframes char-bounce-in {
-  0%   { opacity: 0; transform: translateY(60px) scale(0.3); }
-  55%  { opacity: 1; transform: translateY(-12px) scale(1.18); }
-  75%  { opacity: 1; transform: translateY(4px) scale(0.96); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  /* 顶部玻璃高光 */
+  .bounce-char::after {
+    content: attr(data-char);
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(255, 255, 255, 0.58) 24%,
+      rgba(255, 255, 255, 0) 50%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    pointer-events: none;
+    opacity: 0.9;
+  }
 }
 
-/* 持续摇摆（像果冻一样轻轻晃动） */
-@keyframes char-wiggle {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  25%      { transform: translateY(-6px) rotate(-3deg) scale(1.04); }
-  50%      { transform: translateY(0) rotate(0deg) scale(1); }
-  75%      { transform: translateY(-4px) rotate(3deg) scale(1.03); }
+/* 弹跳入场：落地后回弹两下，俏皮节奏 */
+@keyframes jelly-in {
+  0%   { opacity: 0; transform: translateY(46px) scale(0.4) rotate(var(--rot, -6deg)); }
+  45%  { opacity: 1; transform: translateY(-16px) scale(1.22) rotate(calc(var(--rot, -6deg) * -0.6)); }
+  65%  { opacity: 1; transform: translateY(6px) scale(0.92) rotate(calc(var(--rot, -6deg) * 0.3)); }
+  82%  { opacity: 1; transform: translateY(-5px) scale(1.06) rotate(calc(var(--rot, -6deg) * -0.15)); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
 }
 
-#greetingText.pop {
-  opacity: 1;
+/* 持续呼吸弹跳（果冻晃动） */
+@keyframes jelly-bob {
+  0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+  30%      { transform: translateY(-7px) scale(1.035) rotate(-2deg); }
+  60%      { transform: translateY(-2px) scale(0.985) rotate(1.5deg); }
+  80%      { transform: translateY(-5px) scale(1.02) rotate(-1deg); }
 }
 
 #greetingSub {
@@ -148,8 +185,22 @@ body::after {
   color: var(--ink-soft);
   letter-spacing: 2px;
   opacity: 0;
-  animation: fade-up 0.8s ease 0.5s forwards;
+  animation: fade-up 0.8s ease 0.55s forwards;
 }
+
+#greetHint {
+  font-size: 12px;
+  color: #c99aa8;
+  letter-spacing: 1px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.9s forwards;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px dashed rgba(232, 106, 140, 0.35);
+  transition: opacity 0.4s ease;
+}
+
+#greetHint.hide { opacity: 0 !important; }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(14px); }
@@ -201,8 +252,9 @@ body::after {
   letter-spacing: 1px;
 }
 
-/* 花束展示区 */
+/* 花束展示区（含手写层） */
 #bouquetWrap {
+  position: relative;
   width: 100%;
   max-width: 360px;
   flex: 1;
@@ -210,32 +262,102 @@ body::after {
   align-items: center;
   justify-content: center;
   margin: 8px 0;
+  min-height: 0;
+}
+
+/* 手写「dc」层 */
+#handwrite {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.36s ease, transform 0.36s ease;
+}
+
+#handwrite.hw-out {
+  opacity: 0;
+  transform: scale(1.06);
+}
+
+.handwrite-svg {
+  width: 62%;
+  max-width: 220px;
+  height: auto;
+  overflow: visible;
+}
+
+.hw-path {
+  fill: none;
+  stroke: #E86A8C;
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 300 300;
+  stroke-dashoffset: 300;
+}
+
+.hw-heart {
+  stroke: #F58A9E;
+  stroke-width: 2.6;
+}
+
+@keyframes hw-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* 鲜花层 */
+#bouquetBox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.7s ease, transform 0.9s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+#bouquetBox.show {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .bouquet-svg {
   width: 100%;
   height: auto;
-  max-height: 46vh;
+  max-height: 44vh;
 }
 
-.bouquet-svg.bloom .flower {
+/* 鲜花绽放：逐朵弹出 */
+.bouquet-svg .flowers > * {
   transform-origin: center;
-  transform: scale(0);
-  animation: bloom 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: bloom 0.95s cubic-bezier(0.34, 1.5, 0.64, 1) both;
 }
-
-.bouquet-svg.bloom .flower:nth-child(2) { animation-delay: 0.1s; }
-.bouquet-svg.bloom .flower:nth-child(3) { animation-delay: 0.2s; }
-.bouquet-svg.bloom .flower:nth-child(4) { animation-delay: 0.3s; }
-.bouquet-svg.bloom .flower:nth-child(5) { animation-delay: 0.4s; }
-
-@keyframes bloom {
-  from { transform: scale(0); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
+.bouquet-svg .flowers > *:nth-child(1) { animation-delay: 0.05s; }
+.bouquet-svg .flowers > *:nth-child(2) { animation-delay: 0.16s; }
+.bouquet-svg .flowers > *:nth-child(3) { animation-delay: 0.26s; }
+.bouquet-svg .flowers > *:nth-child(4) { animation-delay: 0.36s; }
+.bouquet-svg .flowers > *:nth-child(5) { animation-delay: 0.46s; }
+.bouquet-svg .flowers > *:nth-child(6) { animation-delay: 0.56s; }
 
 .bouquet-svg .stems {
-  animation: stems-grow 1s ease 0.2s both;
+  animation: stems-grow 1.1s ease 0.05s both;
+}
+
+.bouquet-svg .bouquet-wrap {
+  animation: stems-grow 1s ease 0.25s both;
+}
+
+.bouquet-svg .sprinkles {
+  animation: stems-grow 1.2s ease 0.6s both;
+}
+
+@keyframes bloom {
+  from { transform: scale(0.2); opacity: 0; }
+  70%  { opacity: 1; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
 @keyframes stems-grow {
@@ -249,6 +371,14 @@ body::after {
   align-items: center;
   gap: 10px;
   margin-top: 4px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.flower-info.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 #flowerName {
@@ -266,7 +396,7 @@ body::after {
   letter-spacing: 1px;
 }
 
-/* 治愈文案卡片 */
+/* 爱情文案卡片 */
 .quote-card {
   width: 100%;
   background: var(--card);
@@ -276,6 +406,14 @@ body::after {
   text-align: center;
   margin: 10px 0 16px;
   border: 2px dashed rgba(232, 106, 140, 0.25);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.quote-card.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 #quote {
@@ -445,12 +583,23 @@ body::after {
   white-space: nowrap;
 }
 
+.history-item .h-mood {
+  font-size: 11px;
+  color: #fff;
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
 .history-item .h-quote {
   font-size: 13px;
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .history-item .empty,
@@ -459,6 +608,207 @@ body::after {
   color: var(--ink-soft);
   font-size: 14px;
   padding: 40px 0;
+}
+
+/* ---------- 收藏册统计栏 ---------- */
+.stats {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat-item {
+  flex: 1;
+  background: #FFF3F6;
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.stat-item b {
+  display: block;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+/* ---------- 收藏册底部按钮 ---------- */
+.sheet-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(169, 138, 138, 0.25);
+}
+
+.btn-mini {
+  flex: 1;
+  min-height: 46px;
+  border: 1.5px solid rgba(232, 106, 140, 0.4);
+  background: #fff;
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.btn-mini:active {
+  transform: scale(0.96);
+  background: #FFF3F6;
+}
+
+/* ---------- 数据查询面板 ---------- */
+#dataSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(120, 80, 80, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#dataSheet.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.data-sheet {
+  max-height: 78vh;
+}
+
+#dataSheet.show .sheet {
+  transform: translateY(0);
+}
+
+.data-tip {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+.data-tip code {
+  background: #FFF3F6;
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.data-code {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  background: #FBF7F8;
+  border-radius: 14px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #6b5252;
+  white-space: pre;
+  margin: 0;
+}
+
+/* ---------- 「亲爱的，我爱你」弹窗 ---------- */
+#loveModal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(120, 80, 80, 0.32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#loveModal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.love-card {
+  width: min(78vw, 300px);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF2F6 100%);
+  border-radius: 28px;
+  padding: 26px 22px 20px;
+  text-align: center;
+  box-shadow: 0 18px 44px rgba(232, 106, 140, 0.32);
+  border: 2px solid #FFD8E5;
+  transform: scale(0.6);
+  opacity: 0;
+}
+
+#loveModal.show .love-card {
+  animation: love-pop 0.62s cubic-bezier(0.34, 1.7, 0.5, 1) forwards;
+}
+
+@keyframes love-pop {
+  0%   { transform: scale(0.5) translateY(18px); opacity: 0; }
+  55%  { transform: scale(1.1) translateY(-6px); opacity: 1; }
+  75%  { transform: scale(0.96) translateY(2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.love-heart {
+  line-height: 1;
+  display: flex;
+  justify-content: center;
+  animation: heart-beat 1.1s ease-in-out infinite;
+}
+
+.love-heart svg {
+  width: 52px;
+  height: 48px;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(232, 84, 127, 0.28));
+}
+
+@keyframes heart-beat {
+  0%, 100% { transform: scale(1); }
+  25%      { transform: scale(1.16); }
+  45%      { transform: scale(0.97); }
+  65%      { transform: scale(1.09); }
+}
+
+.love-text {
+  margin: 12px 0 18px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.love-btn {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #E86A8C 0%, #F58A9E 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  box-shadow: 0 8px 18px rgba(232, 106, 140, 0.32);
+  cursor: pointer;
+}
+
+.love-btn:active {
+  transform: scale(0.96);
 }
 
 /* ---------- Toast ---------- */

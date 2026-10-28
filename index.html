@@ -13,6 +13,7 @@
   <div id="greeting">
     <div id="greetingText"></div>
     <div id="greetingSub"></div>
+    <div id="greetHint"></div>
   </div>
 
   <!-- 主场景 -->
@@ -22,17 +23,20 @@
       <div class="date-label" id="dateLabel"></div>
     </div>
 
-    <!-- 今日花束 -->
-    <div id="bouquetWrap"></div>
+    <!-- 今日花束：先手写 dc，再淡入鲜花 -->
+    <div id="bouquetWrap">
+      <div id="handwrite"></div>
+      <div id="bouquetBox"></div>
+    </div>
 
     <!-- 花名与 mood -->
-    <div class="flower-info">
+    <div class="flower-info" id="flowerInfo">
       <span id="flowerName"></span>
       <span id="moodTag"></span>
     </div>
 
-    <!-- 治愈文案 -->
-    <div class="quote-card">
+    <!-- 爱情文案 -->
+    <div class="quote-card" id="quoteCard">
       <p id="quote"></p>
     </div>
 
@@ -40,20 +44,58 @@
     <div class="actions">
       <button class="btn btn-ghost" id="btnHistory">花语收藏</button>
       <button class="btn btn-primary" id="btnCollect">
-        <span id="btnCollectText">领取今日花束</span>
+        <span id="btnCollectText">领取今日鲜花</span>
       </button>
       <button class="btn btn-ghost" id="btnShare">分享</button>
     </div>
   </div>
 
-  <!-- 收藏册弹层 -->
+  <!-- 收藏册弹层（含数据查询入口） -->
   <div id="historySheet">
     <div class="sheet">
       <div class="sheet-header">
         <h2>花语收藏册</h2>
         <button class="sheet-close" id="historyClose">✕</button>
       </div>
+      <div class="stats" id="historyStats"></div>
       <div id="historyList"></div>
+      <div class="sheet-footer">
+        <button class="btn-mini" id="btnData">查看领取数据</button>
+        <button class="btn-mini" id="btnCopyData">复制数据</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据查询面板 -->
+  <div id="dataSheet">
+    <div class="sheet data-sheet">
+      <div class="sheet-header">
+        <h2>领取数据（可查询 / 导出）</h2>
+        <button class="sheet-close" id="dataClose">✕</button>
+      </div>
+      <p class="data-tip">数据保存在本机浏览器 localStorage，键名：<code>flower_history</code>。也可在控制台用 <code>FlowerGame.exportJSON()</code> 查询。</p>
+      <pre id="dataCode" class="data-code"></pre>
+    </div>
+  </div>
+
+  <!-- 领取后的俏皮小弹窗 -->
+  <div id="loveModal">
+    <div class="love-card">
+      <div class="love-heart">
+        <svg viewBox="0 0 48 44" aria-hidden="true">
+          <defs>
+            <linearGradient id="heartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FFB6CB"/>
+              <stop offset="100%" stop-color="#E8547F"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 42S2 28.5 2 14.5C2 7.6 7.6 2 14.5 2 18.6 2 22.2 3.9 24 6.9 25.8 3.9 29.4 2 33.5 2 40.4 2 46 7.6 46 14.5 46 28.5 24 42 24 42Z"
+                fill="url(#heartGrad)" stroke="#D2466F" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="15" cy="13" rx="5" ry="3.4" fill="#fff" opacity="0.55" transform="rotate(-25 15 13)"/>
+        </svg>
+      </div>
+      <p class="love-text" id="loveText">亲爱的，我爱你</p>
+      <button class="love-btn" id="loveClose">收下这束花</button>
     </div>
   </div>
 

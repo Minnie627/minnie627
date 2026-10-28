@@ -1,78 +1,99 @@
 // ============================================================
 // 配置表：所有数值与文案集中在此，策划可改此文件调参
-// 命名规范：模块_元素
 // ============================================================
 window.GAME_CONFIG = {
   // 开场问候语
   greetingText: "啵啵~",
-  greetingSub: "今天也来收一束属于你的花吧",
+  greetingSub: "今天也有一束花，想轻轻送给你",
+  greetHint: "轻触屏幕，听一声「啵啵」",
 
-  // 花束主题（每天按日期种子从中取一组）
-  // type: 主花类型；palette: 配色；文案匹配用 quoteIdx 见 quotes 数组下标
+  // 花束主题：每天按日期种子取一组
+  // type 决定线条绘制方式；colors = [线稿主色, 花瓣浅填充, 花心点缀, 枝叶绿]
   bouquets: [
-    { name: "小雏菊",   emoji: "🌼", colors: ["#FFE066", "#FFF4C2", "#7EC87E"], mood: "元气" },
-    { name: "玫瑰",     emoji: "🌹", colors: ["#F5A6B8", "#E86A8C", "#7EC87E"], mood: "浪漫" },
-    { name: "向日葵",   emoji: "🌻", colors: ["#FFB84D", "#F5A623", "#7EC87E"], mood: "阳光" },
-    { name: "郁金香",   emoji: "🌷", colors: ["#F7C6D9", "#E88FB0", "#8FCB9B"], mood: "温柔" },
-    { name: "绣球花",   emoji: "💐", colors: ["#B9A6E0", "#8F7BC8", "#9AD0A0"], mood: "治愈" },
-    { name: "满天星",   emoji: "🌸", colors: ["#FBD1E0", "#F3A6C0", "#A8D8A8"], mood: "清甜" },
-    { name: "铃兰",     emoji: "🪻", colors: ["#E6E1F0", "#C7B8E0", "#9ED0A0"], mood: "安静" },
+    { name: "玫瑰",     type: "rose",        mood: "热恋", colors: ["#D9537A", "#FFF2F6", "#F7A8C4", "#6FA96F"] },
+    { name: "郁金香",   type: "tulip",       mood: "心动", colors: ["#E0729A", "#FFF4F8", "#F6B3CC", "#78B378"] },
+    { name: "小雏菊",   type: "daisy",       mood: "初恋", colors: ["#E8A33D", "#FFFCF3", "#FFE08A", "#7FBF7F"] },
+    { name: "向日葵",   type: "sunflower",   mood: "炽热", colors: ["#D98A24", "#FFF9EC", "#FFC65C", "#6FA96F"] },
+    { name: "绣球花",   type: "hydrangea",   mood: "温柔", colors: ["#8B7BC4", "#F7F4FF", "#C3B6EC", "#7BB87B"] },
+    { name: "铃兰",     type: "bell",        mood: "纯爱", colors: ["#7FAE86", "#F8FCF8", "#CFE8CF", "#6FA96F"] },
+    { name: "满天星",   type: "starry",      mood: "思念", colors: ["#D98BA8", "#FFF8FB", "#F8C9DB", "#86BE86"] },
+    { name: "山茶花",   type: "camellia",    mood: "深情", colors: ["#C94B63", "#FFF5F6", "#F09BAA", "#6FA96F"] },
+    { name: "牡丹",     type: "peony",       mood: "眷恋", colors: ["#DE6C8C", "#FFF6F9", "#F7B3C7", "#7AB47A"] },
+    { name: "栀子花",   type: "gardenia",    mood: "约定", colors: ["#B8A44E", "#FFFDF4", "#F2E6A8", "#74AE74"] },
+    { name: "风铃草",   type: "bell",        mood: "守候", colors: ["#7E8FCB", "#F6F8FF", "#BCC7F0", "#79B379"] },
+    { name: "洋桔梗",   type: "camellia",    mood: "陪伴", colors: ["#C08AC4", "#FCF6FD", "#E4C0E6", "#7BB47B"] },
   ],
 
-  // 治愈文案库（数量充足，每日不同）
+  // 爱情文案库（每日一句，随日期变化）
   quotes: [
-    "今天也要好好吃饭，好好睡觉，好好爱自己。",
-    "你不需要成为别人，你已经足够好。",
-    "慢慢来，比较快。",
-    "世界偶尔薄凉，内心也要繁花似锦。",
-    "把烦恼交给风，把好心情留给自己。",
-    "今天的不开心，就到此为止吧。",
-    "你值得世间一切温柔。",
-    "花会沿路盛开，你以后的路也是。",
-    "别急，最好的总在不经意间出现。",
-    "累的时候，记得抱抱自己。",
-    "一切都会好起来的，如果还没好，那就是还没到最后。",
-    "生活明朗，万物可爱。",
-    "你要相信，总有一束光，是为你而亮。",
-    "温柔半两，从容一生。",
-    "今天的你，也辛苦了呀。",
-    "把日子过成自己喜欢的样子。",
-    "愿你被这个世界温柔以待。",
-    "心若向阳，无谓悲伤。",
-    "有些美好，值得慢慢等待。",
-    "先爱自己，再爱别人。",
-    "路还长，我们慢慢走。",
-    "每一个平凡的日子，都值得被认真对待。",
-    "愿你眼中有光，心中有暖。",
-    "小确幸，是生活偷偷给的糖。",
-    "你笑起来，就是今天最美的花。",
-    "别怕，我一直在。",
-    "熬过无人问津的日子，才能拥抱诗和远方。",
-    "世界那么大，总会有人懂你。",
-    "愿你历尽千帆，归来仍是少年。",
-    "今天也要元气满满地出发呀。",
-    "所有的温柔，都藏在细节里。",
-    "你不必光芒万丈，但请始终温暖有光。",
+    "遇见你之后，我的每个明天都变得值得期待。",
+    "你是我平淡日子里，最心动的那一束光。",
+    "想和你一起，把春天过成一辈子。",
+    "喜欢是乍见之欢，爱你是久处不厌。",
+    "世界很大，我的眼里只有你。",
+    "你今天有一点可爱，我有一点心动。",
+    "我把所有的温柔，都留给了你。",
+    "与你有关的每一天，都是好天气。",
+    "想牵着你的手，走很长很长的路。",
+    "你一笑，我的心就开了一整片花海。",
+    "余生很长，请多多指教。",
+    "我不擅长说情话，可我说的话都是真的。",
+    "你是我藏在心里的，最甜的秘密。",
+    "想和你一起看日出，也一起等日落。",
+    "有你在的地方，就是我想去的远方。",
+    "爱你这件事，我从来没有含糊过。",
+    "你是我所有不确定里，唯一的确定。",
+    "今天的风很甜，因为想到了你。",
+    "我数过了，喜欢你的理由有一万个。",
+    "你不需要完美，你只需要是你。",
+    "想在你身边，做你最喜欢的那束花。",
+    "我把心事种成花，等它开给你看。",
+    "与你相遇，是我最好的运气。",
+    "你走过的地方，都开满了花。",
+    "想和你共享每一个平凡的清晨。",
+    "爱你，是我做过最勇敢的事。",
+    "你是我心里，最温柔的那一页。",
+    "就算世界荒芜，我也会站在你身边。",
+    "你今天也在我心里，开了一朵花。",
+    "想和你慢慢变老，慢慢把日子过甜。",
+    "你是我的心事，也是我的答案。",
+    "每次想你，心里都会亮一下。",
+    "我的手很冷，可以借你的吗。",
+    "你是我想收藏一辈子的人。",
+    "想送你的不止这束花，还有我全部的心动。",
+    "你不用奔向谁，我会走向你。",
+    "喜欢你的日子，连风都是甜的。",
+    "你是我漫长岁月里，唯一的偏爱。",
+    "想和你一起，把普通的日子过成纪念日。",
+    "爱你，是我每天都会重新决定的事。",
+    "我把今天的花，和今天的心，都送给你。",
+    "你出现的那天，我的世界开始有颜色。",
+    "想成为你疲惫时，可以停靠的那盏灯。",
+    "你说过的每句晚安，我都偷偷收好了。",
+    "这束花会谢，但我不会。",
   ],
 
-  // 收藏册上限（本地 localStorage 存储）
-  collectionMax: 120,
+  // 领取后的俏皮小弹窗
+  loveMessage: "亲爱的，我爱你",
+
+  // 收藏册上限（本地存储）
+  collectionMax: 365,
 
   // 动画时长（毫秒）
   anim: {
     greetingIn: 900,
-    greetingHold: 1200,
+    greetingHold: 1400,
     greetingOut: 600,
-    bloom: 1200,
-    petalFall: 6000,
+    handwrite: 1500,   // 手写 dc
+    handwriteOut: 380, // 手写淡出
+    bloom: 1200,       // 鲜花淡入绽放
   },
 };
 
 // ============================================================
-// 种子随机数（日期 → 可复现的确定性随机），保证同一天花束一致
+// 种子随机（日期 → 可复现的确定性随机），保证同一天花束一致
 // ============================================================
 window.GAME_UTIL = {
-  // 简单确定性哈希（字符串 → uint32）
   hashCode: function (str) {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) {
@@ -81,7 +102,6 @@ window.GAME_UTIL = {
     }
     return h >>> 0;
   },
-  // 基于种子的伪随机（mulberry32）
   seededRandom: function (seed) {
     return function () {
       seed |= 0;
@@ -91,22 +111,30 @@ window.GAME_UTIL = {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   },
-  // 生成今日日期 key，如 "2026-10-27"
-  todayKey: function () {
-    const d = new Date();
+  // 日期格式化 "2026-10-28"
+  fmtDate: function (d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return y + "-" + m + "-" + day;
   },
-  // 根据日期 key 计算今日花束索引
-  bouquetIndexFor: function (dateKey) {
-    const h = this.hashCode(dateKey);
-    return h % window.GAME_CONFIG.bouquets.length;
+  todayKey: function () {
+    return this.fmtDate(new Date());
   },
-  // 根据日期 key 计算今日文案索引
+  bouquetIndexFor: function (dateKey) {
+    return this.hashCode(dateKey) % window.GAME_CONFIG.bouquets.length;
+  },
   quoteIndexFor: function (dateKey) {
-    const h = this.hashCode("q" + dateKey);
-    return h % window.GAME_CONFIG.quotes.length;
+    return this.hashCode("q" + dateKey) % window.GAME_CONFIG.quotes.length;
+  },
+  // 查询某一天的花束与文案（供数据查询用）
+  lookup: function (dateKey) {
+    const C = window.GAME_CONFIG;
+    return {
+      date: dateKey,
+      flower: C.bouquets[this.bouquetIndexFor(dateKey)].name,
+      mood: C.bouquets[this.bouquetIndexFor(dateKey)].mood,
+      quote: C.quotes[this.quoteIndexFor(dateKey)],
+    };
   },
 };
